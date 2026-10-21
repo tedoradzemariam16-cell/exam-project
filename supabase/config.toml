@@ -1,0 +1,12 @@
+# Minimal Supabase CLI config. Only settings this project relies on.
+project_id = "taoba-quiz"
+
+[auth]
+# Students join without an account using Supabase anonymous sign-ins.
+enable_anonymous_sign_ins = true
+
+[functions.generate-questions]
+# The function verifies the caller itself (supabase.auth.getUser) so it works
+# with both legacy JWT keys and the newer publishable/secret API keys.
+verify_jwt = false
+import_map = "./functions/deno.json"
