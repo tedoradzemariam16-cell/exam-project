@@ -31,6 +31,7 @@ import { controlGame, fetchServerTime, loadSessionBundle, removeParticipant, typ
 import { estimateClockOffset, questionPhase, remainingMs } from './clock'
 import { ANSWER_STYLES, optionLabel } from './answerStyles'
 import { Countdown } from './Countdown'
+import { JoinQr } from './JoinQr'
 import { useNow } from './useNow'
 
 const AUTO_ADVANCE_DELAY_MS = 8000
@@ -219,6 +220,10 @@ export function HostPage() {
               <p className="mt-2 font-mono text-6xl font-extrabold tracking-[0.15em] text-slate-950 sm:text-7xl" aria-label={`თამაშის კოდი ${session.code.split('').join(' ')}`}>
                 {session.code.slice(0, 3)} {session.code.slice(3)}
               </p>
+              <div className="mt-6">
+                <JoinQr url={joinUrl} />
+                <p className="mt-2 text-sm text-slate-500">ან დაასკანერეთ QR კოდი ტელეფონით</p>
+              </div>
               <div className="mt-6 flex justify-center">
                 <Button
                   variant="secondary"
