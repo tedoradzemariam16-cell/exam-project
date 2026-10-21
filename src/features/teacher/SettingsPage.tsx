@@ -1,11 +1,11 @@
 import { useState, type FormEvent } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { KeyRound, ShieldAlert, UserRound } from 'lucide-react'
 import { Card, CardBody, CardHeader, PageHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Field, Input } from '@/components/ui/Field'
 import { Alert } from '@/components/ui/Feedback'
-import { ConfirmDialog } from '@/components/ui/Dialog'
+import { ConfirmDialog, Modal } from '@/components/ui/Dialog'
 import { useToast } from '@/components/ui/Toast'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { deleteFinishedSessions } from '@/features/game/api'
@@ -13,7 +13,8 @@ import { supabase } from '@/lib/supabase'
 import { toGeorgianMessage } from '@/lib/errors'
 
 export function SettingsPage() {
-  const { profile, session, refreshProfile } = useAuth()
+  const { profile, session, refreshProfile, signOut } = useAuth()
+  const navigate = useNavigate()
   const toast = useToast()
   const [params] = useSearchParams()
   const recovery = params.get('recovery') === '1'
@@ -27,6 +28,23 @@ export function SettingsPage() {
   const [savingPw, setSavingPw] = useState(false)
   const [confirmClear, setConfirmClear] = useState(false)
   const [clearing, setClearing] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deleteText, setDeleteText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const DELETE_WORD = 'წაშლა'
+
+  const deleteAccount = async () => {
+    setDeleting(true)
+    const { error } = await supabase.rpc('delete_my_account')
+    if (error) {
+      setDeleting(false)
+      toast.error(toGeorgianMessage(error))
+      return
+    }
+    await signOut().catch(() => undefined)
+    toast.success('ანგარიში და ყველა მონაცემი წაიშალა.')
+    navigate('/', { replace: true })
+  }
 
   const saveProfile = async (e: FormEvent) => {
     e.preventDefault()
@@ -125,10 +143,16 @@ export function SettingsPage() {
               სამუდამოდ იშლება მათი მონაწილეები და პასუხებიც.
             </p>
             <Button variant="danger" onClick={() => setConfirmClear(true)}>ყველა დასრულებული სესიის წაშლა</Button>
-            <p className="text-xs text-slate-500">
-              მთლიანი ანგარიშის წასაშლელად მიმართეთ პლატფორმის ადმინისტრატორს (Supabase → Authentication → Users). ანგარიშის
-              წაშლისას ავტომატურად იშლება ყველა ქვიზი და სესია.
-            </p>
+            <div className="border-t border-red-100 pt-4">
+              <p className="font-semibold text-slate-900">ანგარიშის წაშლა</p>
+              <p className="mt-1">
+                სამუდამოდ წაიშლება თქვენი ანგარიში, ყველა ქვიზი, სესია, მონაწილე და პასუხი. აღდგენა შეუძლებელია —
+                საჭიროების შემთხვევაში ჯერ ჩამოტვირთეთ შედეგები CSV ფორმატით.
+              </p>
+              <Button variant="danger" className="mt-3" onClick={() => setDeleteOpen(true)}>
+                ანგარიშის წაშლა
+              </Button>
+            </div>
           </CardBody>
         </Card>
       </div>
@@ -143,6 +167,29 @@ export function SettingsPage() {
         danger
         loading={clearing}
       />
+      <Modal
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false)
+          setDeleteText('')
+        }}
+        title="ანგარიშის სამუდამოდ წაშლა"
+        description="ეს მოქმედება შეუქცევადია. დასადასტურებლად ჩაწერეთ სიტყვა „წაშლა“."
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setDeleteOpen(false)} disabled={deleting}>
+              გაუქმება
+            </Button>
+            <Button variant="danger" onClick={() => void deleteAccount()} loading={deleting} disabled={deleteText.trim() !== DELETE_WORD}>
+              სამუდამოდ წაშლა
+            </Button>
+          </>
+        }
+      >
+        <Field label="დადასტურება">
+          <Input value={deleteText} onChange={(e) => setDeleteText(e.target.value)} autoComplete="off" placeholder={DELETE_WORD} />
+        </Field>
+      </Modal>
     </>
   )
 }
