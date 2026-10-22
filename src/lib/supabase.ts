@@ -1,13 +1,47 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
+const rawUrl = ((import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? '').trim()
+const anonKey = ((import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '').trim()
 
-/** True when the public Supabase settings are present. */
-export const isSupabaseConfigured = Boolean(url && anonKey && url.startsWith('http'))
+/** Normalise the project URL: add a missing https:// and drop paths like /rest/v1. */
+export function normalizeSupabaseUrl(value: string): string | null {
+  const v = value.trim().replace(/^['"]|['"]$/g, '')
+  if (!v) return null
+  try {
+    const u = new URL(/^https?:\/\//i.test(v) ? v : `https://${v}`)
+    if (!/^https?:$/.test(u.protocol) || !u.hostname.includes('.') && u.hostname !== 'localhost') return null
+    return u.origin
+  } catch {
+    return null
+  }
+}
+
+/** Describes what is wrong with the public configuration, or null when it is fine. */
+export function describeConfigProblem(urlValue: string, keyValue: string): string | null {
+  if (!urlValue) return 'VITE_SUPABASE_URL არ არის მითითებული.'
+  if (!normalizeSupabaseUrl(urlValue)) {
+    return 'VITE_SUPABASE_URL არასწორი ფორმატისაა. უნდა გამოიყურებოდეს ასე: https://xxxx.supabase.co'
+  }
+  if (!keyValue) return 'VITE_SUPABASE_ANON_KEY არ არის მითითებული.'
+  if (/^https?:\/\//i.test(keyValue)) {
+    return 'VITE_SUPABASE_ANON_KEY-ში მისამართია ჩაწერილი. აქ უნდა იყოს anon public (eyJ…) ან publishable (sb_publishable_…) გასაღები.'
+  }
+  if (/^sb_secret_/.test(keyValue)) {
+    return 'VITE_SUPABASE_ANON_KEY-ში საიდუმლო (secret) გასაღებია! ის დაუყოვნებლივ წაშალეთ Vercel-იდან და ჩაწერეთ anon public / publishable გასაღები.'
+  }
+  return null
+}
+
+const url = normalizeSupabaseUrl(rawUrl)
+
+/** Problem with the public settings (shown on screen), or null. */
+export const configProblem = describeConfigProblem(rawUrl, anonKey)
+
+/** True when the public Supabase settings are present and well-formed. */
+export const isSupabaseConfigured = configProblem === null
 
 function make(storageKey: string, storage: Storage | undefined): SupabaseClient {
-  return createClient(url ?? 'http://localhost:54321', anonKey ?? 'missing-key', {
+  return createClient(url ?? 'http://localhost:54321', anonKey || 'missing-key', {
     auth: { storageKey, storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: storageKey === TEACHER_KEY },
     realtime: { params: { eventsPerSecond: 10 } },
   })
