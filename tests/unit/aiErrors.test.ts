@@ -97,11 +97,11 @@ describe('generateQuestions client', () => {
     expect(err.georgian).toContain('დღიური ლიმიტი')
   })
 
-  it('reports network failures', async () => {
+  it('reports an unreachable function', async () => {
     const { FunctionsFetchError } = await import('@supabase/supabase-js')
     const { generateQuestions } = await import('@/features/quiz/aiClient')
     invoke.mockResolvedValue({ data: null, error: new FunctionsFetchError(new Error('offline')) })
-    await expect(generateQuestions({} as never)).rejects.toMatchObject({ code: 'NETWORK' })
+    await expect(generateQuestions({} as never)).rejects.toMatchObject({ code: 'AI_UNREACHABLE' })
   })
 
   it('re-validates the response and rejects invalid questions', async () => {
