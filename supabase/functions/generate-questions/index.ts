@@ -77,7 +77,32 @@ async function generateWith(ai: GoogleGenAI, model: string, system: string, prom
   }
 }
 
+/** Public key for calling Supabase as the user. Newer projects may not expose SUPABASE_ANON_KEY. */
+function publicKey(req: Request): string | null {
+  const fromEnv = Deno.env.get('SUPABASE_ANON_KEY')
+  if (fromEnv) return fromEnv
+  try {
+    const keys = JSON.parse(Deno.env.get('SUPABASE_PUBLISHABLE_KEYS') ?? '{}') as Record<string, string>
+    const first = Object.values(keys)[0]
+    if (first) return first
+  } catch {
+    /* not set or not JSON */
+  }
+  // The browser always sends the project's public key in the apikey header.
+  return req.headers.get('apikey')
+}
+
 Deno.serve(async (req) => {
+  try {
+    return await handle(req)
+  } catch {
+    // Never let an exception escape: the browser would see a CORS "network" error.
+    console.error('generate-questions: unexpected error')
+    return fail('INTERNAL', 500, req.headers.get('Origin'))
+  }
+})
+
+async function handle(req: Request): Promise<Response> {
   const origin = req.headers.get('Origin')
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(origin) })
   if (req.method !== 'POST') return fail('METHOD_NOT_ALLOWED', 405, origin)
@@ -88,7 +113,10 @@ Deno.serve(async (req) => {
   // ---- Authenticate the teacher -------------------------------------------
   const authHeader = req.headers.get('Authorization') ?? ''
   if (!authHeader.startsWith('Bearer ')) return fail('UNAUTHORIZED', 401, origin)
-  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')
+  const key = publicKey(req)
+  if (!supabaseUrl || !key) return fail('NOT_CONFIGURED', 503, origin)
+  const supabase = createClient(supabaseUrl, key, {
     global: { headers: { Authorization: authHeader } },
     auth: { persistSession: false, autoRefreshToken: false },
   })
@@ -166,4 +194,4 @@ Deno.serve(async (req) => {
     }
   }
   return fail(lastCode, lastStatus, origin)
-})
+}
