@@ -1,0 +1,73 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/noto-sans-georgian';
+
+@theme {
+  --font-sans: 'Noto Sans Georgian Variable', 'Noto Sans Georgian', 'Sylfaen', system-ui, sans-serif;
+
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #dfe6ff;
+  --color-brand-200: #c4d0ff;
+  --color-brand-300: #9cb0fd;
+  --color-brand-400: #6f86f8;
+  --color-brand-500: #4a61ef;
+  --color-brand-600: #3448de;
+  --color-brand-700: #2742c4;
+  --color-brand-800: #22379e;
+  --color-brand-900: #21337d;
+  --color-brand-950: #151e49;
+
+  --color-accent-400: #f8b84a;
+  --color-accent-500: #f5a524;
+  --color-accent-600: #d9860b;
+
+  /* Answer tiles: colour + shape + letter (never colour alone). */
+  --color-answer-a: #d4382c;
+  --color-answer-b: #2563eb;
+  --color-answer-c: #f2a20c;
+  --color-answer-d: #15803d;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06);
+  --shadow-raised: 0 10px 30px -12px rgb(15 23 42 / 0.25);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    font-feature-settings: 'kern';
+  }
+  :focus-visible {
+    outline: 3px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    transform: scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.animate-pop-in {
+  animation: pop-in 180ms ease-out;
+}
