@@ -58,6 +58,7 @@ describe('quiz settings', () => {
       explanation: 'ახსნა',
       topic: 'თემა',
       objective_index: 1,
+      option_notes: ['', '', '', 'ერევა ცნებები'],
     })
     expect(d).toMatchObject({ text: 'კითხვა?', correctIndex: 2, objectiveIndex: 1, source: 'ai' })
   })

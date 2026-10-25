@@ -88,7 +88,11 @@ export async function saveQuiz(
       objective_index: q.objectiveIndex,
       time_limit_seconds: q.timeLimitSeconds,
       source: q.source,
-      options: q.options.map((text, i) => ({ text, is_correct: i === q.correctIndex })),
+      options: q.options.map((text, i) => ({
+        text,
+        is_correct: i === q.correctIndex,
+        misconception: i === q.correctIndex ? '' : q.optionNotes[i].trim(),
+      })),
     })),
   })
   if (error) throw error

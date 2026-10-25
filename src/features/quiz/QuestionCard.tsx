@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { ArrowDown, ArrowUp, Check, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Lightbulb, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import { Badge, Card } from '@/components/ui/Card'
 import { Input, Select, Textarea } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
@@ -174,6 +174,39 @@ export function QuestionCard({
             <p className="mt-2 text-sm font-medium text-red-700">{err.options ?? err.correctIndex}</p>
           )}
         </fieldset>
+
+        <details className="group rounded-xl border border-slate-200 bg-slate-50/60" open={q.optionNotes.some((n, i) => i !== q.correctIndex && n.trim() !== '')}>
+          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold text-slate-800">
+            <Lightbulb className="size-4 text-amber-600" aria-hidden />
+            რას ნიშნავს არასწორი პასუხის არჩევა?
+            <span className="font-normal text-slate-500">— ანალიტიკისთვის, არასავალდებულო</span>
+          </summary>
+          <div className="space-y-2 px-3 pb-3">
+            <p className="text-xs text-slate-500">
+              ჩაწერეთ, რა ტიპურ შეცდომას ავლენს თითოეული არასწორი პასუხი. შედეგებში ეს დაგეხმარებათ გაიგოთ, რატომ შეცდა
+              მოსწავლე. მოსწავლეები ამ ტექსტს ვერ ხედავენ.
+            </p>
+            {q.options.map((opt, i) =>
+              i === q.correctIndex ? null : (
+                <div key={i} className="flex items-center gap-2">
+                  <AnswerBadge index={i} className="size-7" />
+                  <Input
+                    value={q.optionNotes[i]}
+                    maxLength={300}
+                    onChange={(e) => {
+                      const optionNotes = [...q.optionNotes] as DraftQuestion['optionNotes']
+                      optionNotes[i] = e.target.value
+                      update({ optionNotes })
+                    }}
+                    aria-label={`შეცდომის ახსნა პასუხისთვის ${optionLabel(i)}${opt ? `: ${opt}` : ''}`}
+                    placeholder={opt ? `მაგ.: „${opt}“-ის არჩევა ნიშნავს, რომ მოსწავლე…` : 'შეცდომის ახსნა'}
+                    className="h-10"
+                  />
+                </div>
+              ),
+            )}
+          </div>
+        </details>
 
         <div className="space-y-1.5">
           <label htmlFor={`${baseId}-expl`} className="block text-sm font-semibold text-slate-800">
