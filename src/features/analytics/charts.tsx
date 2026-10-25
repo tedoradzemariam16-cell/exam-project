@@ -206,7 +206,7 @@ export function MasteryList({ groups, emptyText }: { groups: GroupStat[]; emptyT
                 />
               </div>
               <span className="w-24 shrink-0 text-right text-sm text-slate-700 tabular-nums">
-                {formatPercent(g.correctRate)} ({g.correct}/{g.responses})
+                {formatPercent(g.correctRate)} ({g.correct}/{g.attempts})
               </span>
             </div>
             <p className="mt-1 text-xs text-slate-500">

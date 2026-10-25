@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { computeAnalytics, masteryOf, scoreHistogram } from '@/features/analytics/compute'
+import { askedQuestionCount, computeAnalytics, masteryOf, scoreHistogram } from '@/features/analytics/compute'
 import { buildRecommendations } from '@/features/analytics/recommendations'
 import { csvCell, resultsCsv, toCsv } from '@/features/analytics/csv'
 import type { AnswerRow, Participant, SessionQuestion } from '@/types/db'
@@ -63,7 +63,9 @@ describe('computeAnalytics', () => {
     expect(r.overview.participantCount).toBe(6)
     expect(r.overview.answerCount).toBe(17)
     expect(r.overview.correctCount).toBe(10)
-    expect(r.overview.correctRate).toBeCloseTo(10 / 17)
+    // an unanswered question counts as wrong: 10 correct of 6 × 3 expected
+    expect(r.overview.correctRate).toBeCloseTo(10 / 18)
+    expect(r.overview.answeredCorrectRate).toBeCloseTo(10 / 17)
     expect(r.overview.responseRate).toBeCloseTo(17 / 18)
     // p6 skipped Q2 → 5 of 6 completed every question
     expect(r.overview.completionRate).toBeCloseTo(5 / 6)
@@ -77,7 +79,7 @@ describe('computeAnalytics', () => {
     expect(q2.noAnswer).toBe(1)
     expect(q2.topWrongIndex).toBe(2)
     expect(q2.topWrongShare).toBeCloseTo(4 / 5)
-    expect(q2.correctRate).toBeCloseTo(1 / 5)
+    expect(q2.correctRate).toBeCloseTo(1 / 6) // the student who ran out of time counts as wrong
   })
 
   it('flags difficult and possibly ambiguous questions', () => {
@@ -90,7 +92,7 @@ describe('computeAnalytics', () => {
   it('groups performance by learning objective and topic, weakest first', () => {
     expect(r.objectives.map((o) => o.name)).toEqual(['მიზანი B', 'მიზანი A'])
     const b = r.objectives[0]
-    expect(b.responses).toBe(11)
+    expect(b.attempts).toBe(12)
     expect(b.correct).toBe(4)
     expect(b.mastery).toBe('weak')
     expect(r.objectives[1].mastery).toBe('strong')
@@ -102,6 +104,39 @@ describe('computeAnalytics', () => {
     const ranks = r.participants.map((x) => x.rank)
     expect(ranks).toEqual([1, 2, 2, 4, 4, 4]) // 3600, 2400, 2400, 1200, 1200, 1200
     expect(r.participants.find((x) => x.id === 'p6')?.selections).toEqual([0, null, 0])
+  })
+
+  it('counts a question left without an answer as wrong for the student', () => {
+    const p6 = r.participants.find((x) => x.id === 'p6')!
+    expect(p6).toMatchObject({ correct: 1, answered: 2, unanswered: 1 })
+    expect(p6.accuracy).toBeCloseTo(1 / 3)
+    // 9 of 10 right + 1 unanswered is 90%, not 100%
+    const ten = Array.from({ length: 10 }, (_, i) => q(i, 0, 'მიზანი', 'თემა'))
+    const r10 = computeAnalytics(ten, [p(1)], ten.slice(0, 9).map((qq) => a(1, qq, 0)))
+    expect(r10.participants[0].accuracy).toBeCloseTo(0.9)
+    expect(r10.overview.correctRate).toBeCloseTo(0.9)
+    expect(r10.objectives[0]).toMatchObject({ attempts: 10, correct: 9 })
+  })
+
+  it('does not count questions the game never reached', () => {
+    const r2 = computeAnalytics(Q, P, A.filter((x) => x.session_question_id !== 'q2'), 2)
+    expect(r2.overview.askedCount).toBe(2)
+    expect(r2.questions[2]).toMatchObject({ asked: false, noAnswer: 0, correctRate: null })
+    expect(r2.overview.correctRate).toBeCloseTo(7 / 12)
+    expect(r2.participants.find((x) => x.id === 'p1')).toMatchObject({ unanswered: 0, accuracy: 1 })
+    expect(r2.objectives.find((o) => o.name === 'მიზანი B')).toMatchObject({ questionCount: 1, attempts: 6 })
+  })
+
+  it('works out how many questions were shown from the session state', () => {
+    const now = Date.parse('2026-01-01T10:00:00Z')
+    const s = (status: 'lobby' | 'active' | 'finished', current_index: number, ends: string | null, paused: number | null = null) => ({
+      status, current_index, question_ends_at: ends, paused_remaining_ms: paused,
+    })
+    expect(askedQuestionCount(s('lobby', -1, null), now)).toBe(0)
+    expect(askedQuestionCount(s('finished', 4, null), now)).toBe(5)
+    expect(askedQuestionCount(s('active', 2, '2026-01-01T10:00:10Z'), now)).toBe(2) // Q3 still running
+    expect(askedQuestionCount(s('active', 2, '2026-01-01T09:59:50Z'), now)).toBe(3) // Q3 revealed
+    expect(askedQuestionCount(s('active', 2, null, 5000), now)).toBe(2) // paused mid-question
   })
 
   it('ignores answers of participants that were removed', () => {
@@ -131,7 +166,7 @@ describe('buildRecommendations', () => {
     const recs = buildRecommendations(computeAnalytics(Q, P, A))
     const reteach = recs.find((x) => x.kind === 'reteach_objective')
     expect(reteach?.title).toContain('მიზანი B')
-    expect(reteach?.detail).toContain('36%') // 4/11
+    expect(reteach?.detail).toContain('33%') // 4/12 — the unanswered one counts as wrong
     expect(recs.some((x) => x.kind === 'review_question' && x.title.includes('კითხვა 2'))).toBe(true)
     expect(recs.some((x) => x.kind === 'objective_mastered' && x.title.includes('მიზანი A'))).toBe(true)
     expect(recs[0].severity).toBe('high')

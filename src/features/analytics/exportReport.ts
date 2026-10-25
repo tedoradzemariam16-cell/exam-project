@@ -130,7 +130,7 @@ export async function buildReportDocx(input: ReportInput): Promise<Blob> {
       children.push(
         table(
           ['მიზანი', 'სწორი', 'შეფასება'],
-          a.objectives.map((g) => [g.name, `${formatPercent(g.correctRate)} (${g.correct}/${g.responses})`, MASTERY_LABEL[g.mastery]]),
+          a.objectives.map((g) => [g.name, `${formatPercent(g.correctRate)} (${g.correct}/${g.attempts})`, MASTERY_LABEL[g.mastery]]),
           [60, 20, 20],
         ),
       )
@@ -180,6 +180,14 @@ export async function buildReportDocx(input: ReportInput): Promise<Blob> {
         children.push(new Paragraph({ spacing: { before: 120, after: 60 }, children: [new TextRun({ text: `${m.position + 1}. ${m.question}`, bold: true })] }))
         children.push(p(`✗ აირჩია: ${m.chosenText}    ✓ სწორია: ${m.correctText}`))
         if (m.note) children.push(new Paragraph({ spacing: { after: 120 }, children: [new TextRun({ text: 'რატომ შეცდა: ', bold: true, color: '92400E' }), new TextRun({ text: m.note, color: '92400E' })] }))
+      })
+    }
+    if (r.missed.length) {
+      children.push(h2('უპასუხოდ დარჩა — დრო ამოიწურა'))
+      r.missed.forEach((m) => {
+        children.push(new Paragraph({ spacing: { before: 120, after: 60 }, children: [new TextRun({ text: `${m.position + 1}. ${m.question}`, bold: true })] }))
+        children.push(p(`⏱ პასუხი არ აურჩევია    ✓ სწორია: ${m.correctText}`))
+        children.push(p('ვერ მოასწრო ან არ იცოდა — შეფასებაში შეცდომად ითვლება.', { color: '64748B', size: 20 }))
       })
     }
     if (r.recommendations.length) {

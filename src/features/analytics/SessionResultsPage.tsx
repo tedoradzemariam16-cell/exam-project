@@ -25,7 +25,7 @@ import { formatDateTime, formatNumber, formatPercent, formatSeconds } from '@/li
 import { useAsync } from '@/lib/useAsync'
 import { loadSessionBundle } from '@/features/game/api'
 import { optionLabel } from '@/features/game/answerStyles'
-import { computeAnalytics } from './compute'
+import { askedQuestionCount, computeAnalytics } from './compute'
 import { buildRecommendations, type Recommendation } from './recommendations'
 import { MasteryList, OptionDistribution, QuestionCorrectChart, ScoreHistogram } from './charts'
 import { downloadText, questionsCsv, resultsCsv, safeFilename } from './csv'
@@ -45,7 +45,7 @@ export function SessionResultsPage() {
   const [showAllRows, setShowAllRows] = useState(false)
 
   const analytics = useMemo(
-    () => (data ? computeAnalytics(data.questions, data.participants, data.answers) : null),
+    () => (data ? computeAnalytics(data.questions, data.participants, data.answers, askedQuestionCount(data.session)) : null),
     [data],
   )
   const recommendations = useMemo(() => (analytics ? buildRecommendations(analytics) : []), [analytics])
@@ -104,7 +104,7 @@ export function SessionResultsPage() {
         <div className="space-y-6">
           <section aria-label="საერთო შედეგები" className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard label="მონაწილეები" value={formatNumber(o.participantCount)} hint={`დაასრულა ყველა კითხვა: ${formatPercent(o.completionRate)}`} icon={<Users className="size-5" />} />
-            <StatCard label="სწორი პასუხები" value={formatPercent(o.correctRate)} hint={`${formatNumber(o.correctCount)} / ${formatNumber(o.answerCount)} პასუხი`} icon={<CheckCircle2 className="size-5" />} />
+            <StatCard label="სწორი პასუხები" value={formatPercent(o.correctRate)} hint={`${formatNumber(o.correctCount)} / ${formatNumber(o.expectedAnswers)}${o.expectedAnswers > o.answerCount ? ` · უპასუხო (შეცდომად): ${formatNumber(o.expectedAnswers - o.answerCount)}` : ''}`} icon={<CheckCircle2 className="size-5" />} />
             <StatCard
               label="საშუალო ქულა"
               value={o.averageScore === null ? '—' : formatNumber(o.averageScore)}
@@ -241,14 +241,22 @@ export function SessionResultsPage() {
                         </button>
                       </td>
                       <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{formatNumber(p.score)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{p.correct}/{analytics.questions.length}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">{p.correct}/{analytics.overview.askedCount}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{formatPercent(p.accuracy)}</td>
                       {p.selections.map((sel, i) => {
                         const ok = sel !== null && sel === analytics.questions[i].correctIndex
                         return (
                           <td key={i} className="px-2 py-2.5 text-center">
-                            {sel === null ? (
-                              <span className="text-slate-400" aria-label="პასუხი არ არის">—</span>
+                            {sel === null && analytics.questions[i].asked ? (
+                              <span
+                                className="inline-flex min-w-9 items-center justify-center rounded-md bg-slate-100 px-1 text-xs font-bold text-slate-600"
+                                title="დრო ამოიწურა — პასუხი არ აურჩევია (შეცდომად ითვლება)"
+                                aria-label="პასუხი არ აურჩევია — შეცდომად ითვლება"
+                              >
+                                ⏱ ✗
+                              </span>
+                            ) : sel === null ? (
+                              <span className="text-slate-400" aria-label="კითხვა არ დასმულა">—</span>
                             ) : (
                               <span
                                 className={cn('inline-flex min-w-9 items-center justify-center rounded-md px-1 text-xs font-bold', ok ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')}
