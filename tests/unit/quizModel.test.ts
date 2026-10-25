@@ -126,3 +126,55 @@ describe('Georgian error messages', () => {
     expect(toGeorgianMessage(new TypeError('Failed to fetch'))).toContain('ქსელთან')
   })
 })
+
+describe('answer shuffling', () => {
+  // deterministic pseudo-random for tests
+  const seq = (seed: number) => () => {
+    seed = (seed * 1103515245 + 12345) % 2 ** 31
+    return seed / 2 ** 31
+  }
+  const make = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({
+      ...emptyQuestion(),
+      text: `Q${i}`,
+      options: [`სწორი${i}`, `ა${i}`, `ბ${i}`, `გ${i}`] as [string, string, string, string],
+      optionNotes: ['', `შენიშვნა ა${i}`, `შენიშვნა ბ${i}`, `შენიშვნა გ${i}`] as [string, string, string, string],
+      correctIndex: 0,
+    }))
+
+  it('spreads correct answers evenly over the four positions', async () => {
+    const { shuffleAnswers } = await import('@/features/quiz/model')
+    const out = shuffleAnswers(make(8), seq(7))
+    const counts = [0, 0, 0, 0]
+    out.forEach((q) => counts[q.correctIndex]++)
+    expect(counts).toEqual([2, 2, 2, 2])
+  })
+
+  it('keeps the correct answer correct and notes attached to their options', async () => {
+    const { shuffleAnswers } = await import('@/features/quiz/model')
+    const out = shuffleAnswers(make(10), seq(42))
+    out.forEach((q, i) => {
+      expect(q.options[q.correctIndex]).toBe(`სწორი${i}`)
+      expect(q.optionNotes[q.correctIndex]).toBe('')
+      q.options.forEach((opt, k) => {
+        if (k !== q.correctIndex) expect(q.optionNotes[k]).toBe(`შენიშვნა ${opt}`)
+      })
+      expect([...q.options].sort()).toEqual([`სწორი${i}`, `ა${i}`, `ბ${i}`, `გ${i}`].sort())
+    })
+  })
+
+  it('moveCorrectTo puts the correct answer at the requested position', async () => {
+    const { moveCorrectTo } = await import('@/features/quiz/model')
+    for (const target of [0, 1, 2, 3]) {
+      const q = moveCorrectTo(make(1)[0], target, seq(target + 1))
+      expect(q.correctIndex).toBe(target)
+      expect(q.options[target]).toBe('სწორი0')
+    }
+  })
+
+  it('uses every position when there are fewer than four questions', async () => {
+    const { balancedCorrectPositions } = await import('@/features/quiz/model')
+    expect(new Set(balancedCorrectPositions(3, seq(3))).size).toBe(3)
+    expect(balancedCorrectPositions(0)).toEqual([])
+  })
+})

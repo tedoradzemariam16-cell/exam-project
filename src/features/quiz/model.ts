@@ -179,6 +179,59 @@ export function validateQuestion(q: DraftQuestion): QuestionIssues | null {
   return issues
 }
 
+// ---------------------------------------------------------------- shuffling
+// Language models tend to put the correct answer first. We shuffle answer
+// options and spread the correct answer evenly over ა/ბ/გ/დ.
+
+export type RandomFn = () => number
+
+/** Cryptographically random [0, 1) when available (fallback: Math.random). */
+export const secureRandom: RandomFn = () => {
+  try {
+    const a = new Uint32Array(1)
+    crypto.getRandomValues(a)
+    return a[0] / 2 ** 32
+  } catch {
+    return Math.random()
+  }
+}
+
+function shuffled<T>(items: T[], rand: RandomFn): T[] {
+  const a = [...items]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1))
+    ;[a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
+
+/** Target positions for the correct answer: each of 0..3 used as evenly as possible, in random order. */
+export function balancedCorrectPositions(count: number, rand: RandomFn = secureRandom): number[] {
+  const pool: number[] = []
+  while (pool.length < count) pool.push(...shuffled([0, 1, 2, 3], rand))
+  return shuffled(pool.slice(0, count), rand)
+}
+
+/** Reorder one question's options so the correct answer lands on `target`; notes move with their options. */
+export function moveCorrectTo(q: DraftQuestion, target: number, rand: RandomFn = secureRandom): DraftQuestion {
+  if (q.correctIndex < 0 || q.correctIndex > 3) return q
+  const wrong = shuffled([0, 1, 2, 3].filter((i) => i !== q.correctIndex), rand)
+  const order: number[] = []
+  for (let pos = 0, w = 0; pos < 4; pos++) order.push(pos === target ? q.correctIndex : wrong[w++])
+  return {
+    ...q,
+    options: order.map((i) => q.options[i]) as DraftQuestion['options'],
+    optionNotes: order.map((i) => q.optionNotes[i]) as DraftQuestion['optionNotes'],
+    correctIndex: target,
+  }
+}
+
+/** Shuffle answers of all questions with the correct answer spread evenly. */
+export function shuffleAnswers(questions: DraftQuestion[], rand: RandomFn = secureRandom): DraftQuestion[] {
+  const targets = balancedCorrectPositions(questions.length, rand)
+  return questions.map((q, i) => moveCorrectTo(q, targets[i], rand))
+}
+
 export function fromGenerated(g: GeneratedQuestion): DraftQuestion {
   return {
     key: newKey(),
