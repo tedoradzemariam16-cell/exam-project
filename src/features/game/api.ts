@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
+import { currentUserId, supabase } from '@/lib/supabase'
 import type { AnswerRow, GameSession, Participant, PlayerState, SessionQuestion } from '@/types/db'
 
 // ------------------------------------------------------------------ teacher
@@ -28,10 +28,13 @@ export interface SessionListItem extends GameSession {
   participants: { count: number }[]
 }
 
-export async function listSessions(): Promise<SessionListItem[]> {
+export async function listSessions(teacherId?: string): Promise<SessionListItem[]> {
+  // Always filter by owner: an administrator can read every teacher's rows.
+  const owner = teacherId ?? (await currentUserId())
   const { data, error } = await supabase
     .from('game_sessions')
     .select('*, participants(count)')
+    .eq('teacher_id', owner)
     .order('created_at', { ascending: false })
     .limit(200)
   if (error) throw error
@@ -99,7 +102,7 @@ export async function deleteSession(sessionId: string): Promise<void> {
 }
 
 export async function deleteFinishedSessions(): Promise<number> {
-  const { data, error } = await supabase.from('game_sessions').delete().eq('status', 'finished').select('id')
+  const { data, error } = await supabase.from('game_sessions').delete().eq('teacher_id', await currentUserId()).eq('status', 'finished').select('id')
   if (error) throw error
   return data?.length ?? 0
 }

@@ -102,3 +102,11 @@ export async function ensureStudentSession(): Promise<SupabaseClient> {
   }
   return client
 }
+
+/** The signed-in teacher's id (read from the stored session, no network call). */
+export async function currentUserId(): Promise<string> {
+  const { data } = await supabase.auth.getSession()
+  const id = data.session?.user.id
+  if (!id) throw new Error('UNAUTHORIZED')
+  return id
+}

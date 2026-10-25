@@ -156,7 +156,7 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthShell title="მასწავლებლის რეგისტრაცია" subtitle="უფასო ანგარიში ქვიზების შესაქმნელად და ანალიტიკისთვის.">
+    <AuthShell title="მასწავლებლის რეგისტრაცია" subtitle="რეგისტრაციის შემდეგ ანგარიშს სკოლის ადმინისტრატორი დაადასტურებს.">
       <form onSubmit={submit} className="space-y-4" noValidate>
         {formError && <Alert tone="error">{formError}</Alert>}
         <Field label="სახელი და გვარი" error={errors.fullName} required>

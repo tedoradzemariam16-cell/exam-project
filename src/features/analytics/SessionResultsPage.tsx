@@ -23,6 +23,7 @@ import { cn } from '@/lib/cn'
 import { toGeorgianMessage } from '@/lib/errors'
 import { formatDateTime, formatNumber, formatPercent, formatSeconds } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
+import { useAuth } from '@/features/auth/AuthProvider'
 import { loadSessionBundle } from '@/features/game/api'
 import { optionLabel } from '@/features/game/answerStyles'
 import { askedQuestionCount, computeAnalytics } from './compute'
@@ -41,6 +42,7 @@ const SEVERITY: Record<Recommendation['severity'], { label: string; cls: string;
 
 export function SessionResultsPage() {
   const { id = '' } = useParams()
+  const { session: authSession } = useAuth()
   const { data, error, loading } = useAsync(() => loadSessionBundle(id), [id])
   const [showAllRows, setShowAllRows] = useState(false)
 
@@ -63,6 +65,7 @@ export function SessionResultsPage() {
   }
 
   const { session } = data
+  const isOwner = !authSession || session.teacher_id === authSession.user.id
   const o = analytics.overview
   const file = safeFilename(`${session.title}_${session.created_at.slice(0, 10)}`)
   const rows = showAllRows ? analytics.participants : analytics.participants.slice(0, 25)
@@ -87,7 +90,13 @@ export function SessionResultsPage() {
         }
       />
 
-      {session.status !== 'finished' && (
+      {!isOwner && (
+        <Alert tone="info" className="mb-6" title="ადმინისტრატორის რეჟიმი — მხოლოდ ნახვა">
+          ეს თამაში სხვა მასწავლებელს ეკუთვნის. შედეგების ნახვა და ჩამოტვირთვა შეგიძლიათ, თამაშის მართვა — არა.
+        </Alert>
+      )}
+
+      {isOwner && session.status !== 'finished' && (
         <Alert
           tone="warning"
           className="mb-6"

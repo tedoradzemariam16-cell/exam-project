@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { currentUserId, supabase } from '@/lib/supabase'
 import type { LearningObjective, Question, Quiz, QuizStatus } from '@/types/db'
 import type { DraftQuestion, QuizSettings } from './model'
 
@@ -9,10 +9,13 @@ export interface QuizListItem extends Pick<
   questions: { count: number }[]
 }
 
-export async function listQuizzes(): Promise<QuizListItem[]> {
+export async function listQuizzes(teacherId?: string): Promise<QuizListItem[]> {
+  // Always filter by owner: an administrator can read every teacher's rows.
+  const owner = teacherId ?? (await currentUserId())
   const { data, error } = await supabase
     .from('quizzes')
     .select('id, title, subject, grade_level, topic, status, updated_at, created_at, difficulty, questions(count)')
+    .eq('teacher_id', owner)
     .order('updated_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as QuizListItem[]

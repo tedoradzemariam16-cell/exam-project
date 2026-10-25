@@ -18,8 +18,8 @@ export function LaunchPage() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const preselected = params.get('quiz')
-  const quizzes = useAsync(listQuizzes, [])
-  const sessions = useAsync(listSessions, [])
+  const quizzes = useAsync(() => listQuizzes(), [])
+  const sessions = useAsync(() => listSessions(), [])
   const [starting, setStarting] = useState<string | null>(null)
 
   const published = (quizzes.data ?? []).filter((q) => q.status === 'published')
