@@ -34,7 +34,18 @@ import { Countdown } from './Countdown'
 import { JoinQr } from './JoinQr'
 import { useNow } from './useNow'
 
-const AUTO_ADVANCE_DELAY_MS = 8000
+/** Seconds to wait after the reveal before moving on automatically. */
+const AUTO_ADVANCE_OPTIONS = [3, 5, 8] as const
+const AUTO_DELAY_KEY = 'taoba-auto-advance-delay'
+
+function loadAutoDelay(): number {
+  try {
+    const v = Number(window.localStorage.getItem(AUTO_DELAY_KEY))
+    return (AUTO_ADVANCE_OPTIONS as readonly number[]).includes(v) ? v : 8
+  } catch {
+    return 8
+  }
+}
 
 export function HostPage() {
   const { id = '' } = useParams()
@@ -46,6 +57,10 @@ export function HostPage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [live, setLive] = useState(false)
   const [autoAdvance, setAutoAdvance] = useState(false)
+  const [autoDelay, setAutoDelay] = useState(loadAutoDelay)
+  // Local time when auto-advance was switched on / its delay changed: the
+  // countdown never starts earlier than this, so turning it on late is safe.
+  const [autoSince, setAutoSince] = useState(0)
   const [confirmEnd, setConfirmEnd] = useState(false)
 
   const reload = useCallback(async () => {
@@ -158,11 +173,27 @@ export function HostPage() {
 
   // Optional auto-advance a few seconds after the reveal (server still enforces the timer).
   const revealedKey = currentPhase === 'revealed' && session ? `${session.current_index}` : null
+  const endsLocal = session?.question_ends_at ? Date.parse(session.question_ends_at) - offset : 0
+  const autoDeadline = Math.max(endsLocal, autoSince) + autoDelay * 1000
   useEffect(() => {
     if (!autoAdvance || !revealedKey) return
-    const t = window.setTimeout(() => void run('next_question', 'next'), AUTO_ADVANCE_DELAY_MS)
+    const t = window.setTimeout(() => void run('next_question', 'next'), Math.max(0, autoDeadline - Date.now()))
     return () => window.clearTimeout(t)
-  }, [autoAdvance, revealedKey, run])
+  }, [autoAdvance, revealedKey, autoDeadline, run])
+
+  const changeAutoAdvance = (on: boolean) => {
+    setAutoAdvance(on)
+    setAutoSince(now)
+  }
+  const changeAutoDelay = (sec: number) => {
+    setAutoDelay(sec)
+    setAutoSince(now)
+    try {
+      window.localStorage.setItem(AUTO_DELAY_KEY, String(sec))
+    } catch {
+      /* storage unavailable — keep the choice for this page only */
+    }
+  }
 
   if (!bundle && !loadError) return <PageLoader label="თამაში იტვირთება…" />
   if (!bundle || !session) {
@@ -373,7 +404,37 @@ export function HostPage() {
                   <Leaderboard rows={leaderboard.slice(0, 5)} />
                 </section>
                 <div className="flex flex-wrap items-center justify-between gap-4 lg:col-span-2">
-                  <Switch checked={autoAdvance} onChange={setAutoAdvance} label={<span className="text-white">ავტომატური გადასვლა</span>} description={<span className="text-brand-200">შემდეგ კითხვაზე 8 წამში</span>} />
+                  <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
+                    <Switch
+                      checked={autoAdvance}
+                      onChange={changeAutoAdvance}
+                      label={<span className="text-white">ავტომატური გადასვლა</span>}
+                      description={
+                        <span className="text-brand-200" aria-live="polite">
+                          {autoAdvance
+                            ? `${isLast ? 'შედეგებზე' : 'შემდეგ კითხვაზე'} გადასვლა ${Math.max(0, Math.ceil((autoDeadline - now) / 1000))} წამში`
+                            : `${isLast ? 'შედეგებზე' : 'შემდეგ კითხვაზე'} ${autoDelay} წამში`}
+                        </span>
+                      }
+                    />
+                    <div className="flex items-center gap-1 rounded-xl bg-white/10 p-1" role="group" aria-label="ავტომატური გადასვლის დრო">
+                      {AUTO_ADVANCE_OPTIONS.map((sec) => (
+                        <button
+                          key={sec}
+                          type="button"
+                          aria-pressed={autoDelay === sec}
+                          onClick={() => changeAutoDelay(sec)}
+                          className={
+                            autoDelay === sec
+                              ? 'rounded-lg bg-white px-3 py-1.5 text-sm font-bold text-brand-900'
+                              : 'rounded-lg px-3 py-1.5 text-sm font-semibold text-brand-100 hover:bg-white/10'
+                          }
+                        >
+                          {sec} წმ
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   <Button variant="accent" size="lg" icon={<SkipForward className="size-5" />} disabled={!canAdvance} loading={busy === 'next_question'} onClick={() => void run('next_question', 'next')}>
                     {isLast ? 'საბოლოო შედეგები' : 'შემდეგი კითხვა'}
                   </Button>

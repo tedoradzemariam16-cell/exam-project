@@ -27,6 +27,8 @@ export interface DraftQuestion {
   key: string
   text: string
   options: [string, string, string, string]
+  /** Misconception note per option (ignored for the correct one). */
+  optionNotes: [string, string, string, string]
   correctIndex: number
   explanation: string
   topic: string
@@ -37,6 +39,18 @@ export interface DraftQuestion {
 
 export const MAX_MATERIAL_STORED = 60000
 export const TIME_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120]
+/** Speed-bonus choices shown to the teacher; 0 = no extra points for speed. */
+export const SPEED_BONUS_OPTIONS = [0, 100, 250, 500, 1000]
+
+/** The single "speed bonus" value the editor shows (0 when the bonus is switched off). */
+export function speedBonusValue(s: Pick<QuizSettings, 'speedBonus' | 'maxSpeedBonus'>): number {
+  return s.speedBonus ? s.maxSpeedBonus : 0
+}
+
+/** Settings patch for a chosen speed-bonus value. */
+export function speedBonusPatch(value: number): Pick<QuizSettings, 'speedBonus' | 'maxSpeedBonus'> {
+  return value > 0 ? { speedBonus: true, maxSpeedBonus: value } : { speedBonus: false, maxSpeedBonus: 0 }
+}
 
 export const DEFAULT_SETTINGS: QuizSettings = {
   title: '',
@@ -64,6 +78,7 @@ export function emptyQuestion(): DraftQuestion {
     key: newKey(),
     text: '',
     options: ['', '', '', ''],
+    optionNotes: ['', '', '', ''],
     correctIndex: 0,
     explanation: '',
     topic: '',
@@ -130,6 +145,7 @@ export const draftQuestionSchema = z
       .array(z.string().trim().min(1, 'პასუხი არ უნდა იყოს ცარიელი').max(300, 'მაქსიმუმ 300 სიმბოლო'))
       .length(4, 'საჭიროა ზუსტად ოთხი პასუხი'),
     correctIndex: z.number().int().min(0, 'მონიშნეთ სწორი პასუხი').max(3, 'მონიშნეთ სწორი პასუხი'),
+    optionNotes: z.array(z.string().max(300, 'შეცდომის ახსნა — მაქსიმუმ 300 სიმბოლო')).length(4),
     explanation: z.string().max(1000, 'მაქსიმუმ 1000 სიმბოლო'),
     topic: z.string().max(200, 'მაქსიმუმ 200 სიმბოლო'),
     timeLimitSeconds: z.number().int().min(5).max(240).nullable(),
@@ -168,6 +184,7 @@ export function fromGenerated(g: GeneratedQuestion): DraftQuestion {
     key: newKey(),
     text: g.question,
     options: [g.options[0], g.options[1], g.options[2], g.options[3]],
+    optionNotes: [g.option_notes[0], g.option_notes[1], g.option_notes[2], g.option_notes[3]],
     correctIndex: g.correct_index,
     explanation: g.explanation,
     topic: g.topic,
@@ -203,6 +220,8 @@ export function fromLoaded(loaded: LoadedQuiz): { settings: QuizSettings; questi
   const drafts = questions.map<DraftQuestion>((q) => {
     const opts = q.answer_options.map((o) => o.text)
     while (opts.length < 4) opts.push('')
+    const notes = q.answer_options.map((o) => o.misconception ?? '')
+    while (notes.length < 4) notes.push('')
     const correct = q.answer_options.findIndex((o) => o.is_correct)
     const objTitle = objectives.find((o) => o.id === q.objective_id)?.title
     const idx = objTitle ? finalObjectives.indexOf(objTitle) : -1
@@ -210,6 +229,7 @@ export function fromLoaded(loaded: LoadedQuiz): { settings: QuizSettings; questi
       key: newKey(),
       text: q.text,
       options: [opts[0], opts[1], opts[2], opts[3]],
+      optionNotes: [notes[0], notes[1], notes[2], notes[3]],
       correctIndex: correct,
       explanation: q.explanation,
       topic: q.topic,

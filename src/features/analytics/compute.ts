@@ -40,6 +40,9 @@ export interface QuestionStat {
   topic: string
   objective: string
   options: string[]
+  /** Misconception note per option ('' when none / for the correct one). */
+  optionNotes: string[]
+  explanation: string
   correctIndex: number
   responses: number
   noAnswer: number
@@ -132,6 +135,8 @@ export function computeQuestionStat(q: SessionQuestion, answers: AnswerRow[], pa
     topic: q.topic,
     objective: q.objective_title,
     options: q.options,
+    optionNotes: [0, 1, 2, 3].map((i) => (i === q.correct_index ? '' : (q.option_notes?.[i] ?? '').trim())),
+    explanation: q.explanation ?? '',
     correctIndex: q.correct_index,
     responses,
     noAnswer: Math.max(0, participantCount - responses),

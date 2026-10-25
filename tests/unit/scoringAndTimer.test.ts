@@ -69,3 +69,29 @@ describe('authoritative timer (client view)', () => {
     expect(estimateClockOffset('not a date', 0, 0)).toBe(0)
   })
 })
+
+describe('speed-bonus choices in the quiz editor', () => {
+  it('offers "none", 100, 250, 500 and 1000', async () => {
+    const { SPEED_BONUS_OPTIONS } = await import('@/features/quiz/model')
+    expect(SPEED_BONUS_OPTIONS).toEqual([0, 100, 250, 500, 1000])
+  })
+
+  it('"none" switches the bonus off; other values switch it on', async () => {
+    const { speedBonusPatch, speedBonusValue } = await import('@/features/quiz/model')
+    expect(speedBonusPatch(0)).toEqual({ speedBonus: false, maxSpeedBonus: 0 })
+    expect(speedBonusPatch(100)).toEqual({ speedBonus: true, maxSpeedBonus: 100 })
+    expect(speedBonusValue({ speedBonus: false, maxSpeedBonus: 500 })).toBe(0)
+    expect(speedBonusValue({ speedBonus: true, maxSpeedBonus: 250 })).toBe(250)
+  })
+
+  it('a 100-point bonus adds at most 100; no bonus gives only base points', () => {
+    const rules100 = { speedBonus: true, basePoints: 1000, maxSpeedBonus: 100 }
+    expect(calculatePoints(true, 20000, 20000, rules100)).toBe(1100)
+    expect(calculatePoints(true, 10000, 20000, rules100)).toBe(1050)
+    expect(calculatePoints(true, 0, 20000, rules100)).toBe(1000)
+    const none = { speedBonus: false, basePoints: 1000, maxSpeedBonus: 0 }
+    expect(calculatePoints(true, 20000, 20000, none)).toBe(1000)
+    expect(calculatePoints(true, 1, 20000, none)).toBe(1000)
+    expect(calculatePoints(false, 20000, 20000, none)).toBe(0)
+  })
+})

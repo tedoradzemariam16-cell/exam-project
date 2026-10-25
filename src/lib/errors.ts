@@ -49,6 +49,9 @@ const MESSAGES: Record<string, string> = {
   REQUEST_TOO_LARGE: 'სასწავლო მასალა ძალიან დიდია.',
   UNAUTHORIZED: 'სესია ამოიწურა. გთხოვთ, თავიდან შეხვიდეთ სისტემაში.',
   NETWORK: 'ქსელთან დაკავშირება ვერ მოხერხდა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან.',
+  AI_UNREACHABLE:
+    'AI ფუნქციასთან დაკავშირება ვერ მოხერხდა. შეამოწმეთ, რომ Supabase-ში Edge Function „generate-questions“ გაშვებულია და მასზე „Verify JWT“ გამორთულია.',
+  INTERNAL: 'AI ფუნქციაში მოულოდნელი შეცდომა მოხდა. სცადეთ თავიდან; თუ განმეორდა, ნახეთ ფუნქციის Logs Supabase-ში.',
   // auth (Supabase messages)
   'Invalid login credentials': 'ელფოსტა ან პაროლი არასწორია.',
   'Email not confirmed': 'ელფოსტა ჯერ არ არის დადასტურებული. შეამოწმეთ შემოსული წერილები.',

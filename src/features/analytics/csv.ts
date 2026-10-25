@@ -1,5 +1,6 @@
 import { optionLabel } from '@/features/game/answerStyles'
 import type { SessionAnalytics } from './compute'
+import type { StudentReport } from './students'
 
 /** Quote a CSV cell and neutralise spreadsheet formula injection (=, +, -, @). */
 export function csvCell(value: unknown): string {
@@ -13,7 +14,8 @@ export function toCsv(rows: unknown[][]): string {
   return '﻿' + rows.map((r) => r.map(csvCell).join(',')).join('\r\n')
 }
 
-export function resultsCsv(a: SessionAnalytics): string {
+/** Results per student; with reports, adds the objectives to work on and recommendations. */
+export function resultsCsv(a: SessionAnalytics, reports?: StudentReport[]): string {
   const header = [
     'ადგილი',
     'სახელი',
@@ -23,7 +25,9 @@ export function resultsCsv(a: SessionAnalytics): string {
     'გაცემული პასუხი',
     'სიზუსტე (%)',
     ...a.questions.map((q) => `კ${q.position + 1}`),
+    ...(reports ? ['სამუშაო მიზნები', 'რეკომენდაცია მასწავლებლისთვის'] : []),
   ]
+  const byId = new Map((reports ?? []).map((r) => [r.id, r]))
   const rows = a.participants.map((p) => [
     p.rank,
     p.firstName,
@@ -35,6 +39,12 @@ export function resultsCsv(a: SessionAnalytics): string {
     ...p.selections.map((sel, i) =>
       sel === null ? '—' : `${optionLabel(sel)}${sel === a.questions[i].correctIndex ? ' ✓' : ' ✗'}`,
     ),
+    ...(reports
+      ? [
+          (byId.get(p.id)?.focus ?? []).map((o) => `${o.name} (${o.correct}/${o.total})`).join('; '),
+          (byId.get(p.id)?.recommendations ?? []).join(' '),
+        ]
+      : []),
   ])
   return toCsv([header, ...rows])
 }

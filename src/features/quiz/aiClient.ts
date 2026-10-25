@@ -41,7 +41,11 @@ export async function generateQuestions(req: GenerationRequest): Promise<Generat
       }
       throw new AiError(code)
     }
-    if (error instanceof FunctionsFetchError) throw new AiError('NETWORK')
+    if (error instanceof FunctionsFetchError) {
+      // Offline → network problem; online → the function itself is unreachable
+      // (not deployed, wrong name, JWT verification on, or crashed before CORS).
+      throw new AiError(typeof navigator !== 'undefined' && navigator.onLine === false ? 'NETWORK' : 'AI_UNREACHABLE')
+    }
     if (error instanceof FunctionsRelayError) throw new AiError('MODEL_UNAVAILABLE')
     throw new AiError('UNKNOWN')
   }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   AlertTriangle,
+  FileText,
   BarChart3,
   CheckCircle2,
   Download,
@@ -28,6 +29,8 @@ import { computeAnalytics } from './compute'
 import { buildRecommendations, type Recommendation } from './recommendations'
 import { MasteryList, OptionDistribution, QuestionCorrectChart, ScoreHistogram } from './charts'
 import { downloadText, questionsCsv, resultsCsv, safeFilename } from './csv'
+import { buildObjectiveGroups, buildStudentReports } from './students'
+import { ClassGroupsCard, StudentAnalysisSection } from './StudentAnalysis'
 
 const SEVERITY: Record<Recommendation['severity'], { label: string; cls: string; Icon: typeof AlertTriangle }> = {
   high: { label: 'მაღალი პრიორიტეტი', cls: 'border-red-200 bg-red-50', Icon: AlertTriangle },
@@ -46,6 +49,13 @@ export function SessionResultsPage() {
     [data],
   )
   const recommendations = useMemo(() => (analytics ? buildRecommendations(analytics) : []), [analytics])
+  const studentReports = useMemo(() => (analytics ? buildStudentReports(analytics) : []), [analytics])
+  const objectiveGroups = useMemo(() => buildObjectiveGroups(studentReports), [studentReports])
+  const [selectedStudent, setSelectedStudent] = useState<string | null>(null)
+  const showStudent = (id: string) => {
+    setSelectedStudent(id)
+    document.getElementById('student-analysis')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   if (loading && !data) return <PageLoader />
   if (error || !data || !analytics) {
@@ -64,7 +74,10 @@ export function SessionResultsPage() {
         description={`${formatDateTime(session.started_at ?? session.created_at)} · კოდი ${session.code}${session.subject ? ` · ${session.subject}` : ''}${session.grade_level ? ` · ${session.grade_level}` : ''}`}
         actions={
           <>
-            <Button variant="secondary" icon={<Download className="size-4" />} onClick={() => downloadText(`${file}_შედეგები.csv`, resultsCsv(analytics))} disabled={o.participantCount === 0}>
+            <ButtonLink variant="primary" icon={<FileText className="size-4" />} to={`/app/analytics/${session.id}/report`}>
+              ანგარიში (PDF / ბეჭდვა)
+            </ButtonLink>
+            <Button variant="secondary" icon={<Download className="size-4" />} onClick={() => downloadText(`${file}_შედეგები.csv`, resultsCsv(analytics, studentReports))} disabled={o.participantCount === 0}>
               შედეგები (CSV)
             </Button>
             <Button variant="secondary" icon={<Download className="size-4" />} onClick={() => downloadText(`${file}_კითხვები.csv`, questionsCsv(analytics))}>
@@ -144,6 +157,10 @@ export function SessionResultsPage() {
             </Card>
           </div>
 
+          <ClassGroupsCard groups={objectiveGroups} classSize={studentReports.filter((r) => r.answered > 0).length} onSelectStudent={showStudent} />
+
+          <StudentAnalysisSection reports={studentReports} selectedId={selectedStudent} onSelect={setSelectedStudent} />
+
           <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
             <Card>
               <CardHeader title="სწორი პასუხები კითხვების მიხედვით" />
@@ -218,7 +235,11 @@ export function SessionResultsPage() {
                   {rows.map((p) => (
                     <tr key={p.id}>
                       <td className="px-4 py-2.5 font-semibold text-slate-600 tabular-nums">{p.rank}</td>
-                      <td className="px-3 py-2.5 font-medium whitespace-nowrap text-slate-900">{p.firstName} {p.lastName}</td>
+                      <td className="px-3 py-2.5 font-medium whitespace-nowrap text-slate-900">
+                        <button type="button" onClick={() => showStudent(p.id)} className="rounded text-left hover:text-brand-700 hover:underline" title="მოსწავლის ანალიზის ნახვა">
+                          {p.firstName} {p.lastName}
+                        </button>
+                      </td>
                       <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{formatNumber(p.score)}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{p.correct}/{analytics.questions.length}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{formatPercent(p.accuracy)}</td>

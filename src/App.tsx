@@ -26,6 +26,7 @@ const SessionResultsPage = lazy(() =>
   import('@/features/analytics/SessionResultsPage').then((m) => ({ default: m.SessionResultsPage })),
 )
 const HostPage = lazy(() => import('@/features/game/HostPage').then((m) => ({ default: m.HostPage })))
+const ReportPage = lazy(() => import('@/features/analytics/ReportPage').then((m) => ({ default: m.ReportPage })))
 import { JoinPage } from '@/features/student/JoinPage'
 import { PlayPage } from '@/features/student/PlayPage'
 
@@ -56,6 +57,14 @@ const router = createBrowserRouter([
         element: (
           <RequireTeacher>
             <HostPage />
+          </RequireTeacher>
+        ),
+      },
+      {
+        path: '/app/analytics/:id/report',
+        element: (
+          <RequireTeacher>
+            <ReportPage />
           </RequireTeacher>
         ),
       },
