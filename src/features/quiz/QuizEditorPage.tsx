@@ -215,7 +215,7 @@ export function QuizEditorPage() {
         difficulty: settings.difficulty,
         existingQuestions: mode === 'append' ? questions.map((q) => q.text).slice(0, 30) : [],
       })
-      // Models tend to put the correct answer first — shuffle and spread it over ა/ბ/გ/დ.
+      // Models tend to put the correct answer first — shuffle to a random position per question.
       const generated = shuffleAnswers(res.questions.map(fromGenerated))
       setQuestionsDirty((qs) => (mode === 'append' ? [...qs, ...generated] : generated))
       setReviewed(false)
@@ -581,7 +581,7 @@ export function QuizEditorPage() {
                 </Button>
               }
             >
-              მოსწავლეები ამას სწრაფად შეამჩნევენ. აურიეთ პასუხები — სწორი პასუხი თანაბრად გადანაწილდება ა/ბ/გ/დ-ზე.
+              მოსწავლეები ამას სწრაფად შეამჩნევენ. აურიეთ პასუხები — სწორი პასუხი შემთხვევით გადანაწილდება ა/ბ/გ/დ-ზე.
             </Alert>
           )}
 
@@ -649,7 +649,7 @@ export function QuizEditorPage() {
                 disabled={questions.length === 0}
                 onClick={() => {
                   setQuestionsDirty((qs) => shuffleAnswers(qs))
-                  toast.success('პასუხების რიგი აირია — სწორი პასუხები თანაბრად გადანაწილდა ა/ბ/გ/დ-ზე. არ დაგავიწყდეთ შენახვა.')
+                  toast.success('პასუხების რიგი აირია — სწორი პასუხები შემთხვევით გადანაწილდა ა/ბ/გ/დ-ზე. არ დაგავიწყდეთ შენახვა.')
                 }}
               >
                 პასუხების არევა

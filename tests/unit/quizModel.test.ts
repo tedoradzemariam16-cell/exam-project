@@ -142,12 +142,28 @@ describe('answer shuffling', () => {
       correctIndex: 0,
     }))
 
-  it('spreads correct answers evenly over the four positions', async () => {
-    const { shuffleAnswers } = await import('@/features/quiz/model')
-    const out = shuffleAnswers(make(8), seq(7))
-    const counts = [0, 0, 0, 0]
-    out.forEach((q) => counts[q.correctIndex]++)
-    expect(counts).toEqual([2, 2, 2, 2])
+  it('places each correct answer at an independent random position (not forced to be equal)', async () => {
+    const { randomCorrectPositions } = await import('@/features/quiz/model')
+    // Uneven distributions must be possible, e.g. 1×ა, 3×გ, 2×დ, 2×ბ.
+    let uneven = false
+    for (let seed = 1; seed < 40 && !uneven; seed++) {
+      const counts = [0, 0, 0, 0]
+      randomCorrectPositions(8, seq(seed)).forEach((p) => counts[p]++)
+      if (counts.some((c) => c !== 2)) uneven = true
+    }
+    expect(uneven).toBe(true)
+    // ...and over many draws all four positions are used about equally often.
+    const total = [0, 0, 0, 0]
+    for (let seed = 1; seed <= 500; seed++) randomCorrectPositions(8, seq(seed)).forEach((p) => total[p]++)
+    for (const c of total) expect(c / 4000).toBeGreaterThan(0.2)
+  })
+
+  it('never puts every correct answer in the same position when there are 3+ questions', async () => {
+    const { randomCorrectPositions } = await import('@/features/quiz/model')
+    const alwaysZero = () => 0
+    const out = randomCorrectPositions(5, alwaysZero)
+    expect(new Set(out).size).toBeGreaterThan(1)
+    for (let seed = 1; seed <= 200; seed++) expect(new Set(randomCorrectPositions(3, seq(seed))).size).toBeGreaterThan(1)
   })
 
   it('keeps the correct answer correct and notes attached to their options', async () => {
@@ -172,9 +188,9 @@ describe('answer shuffling', () => {
     }
   })
 
-  it('uses every position when there are fewer than four questions', async () => {
-    const { balancedCorrectPositions } = await import('@/features/quiz/model')
-    expect(new Set(balancedCorrectPositions(3, seq(3))).size).toBe(3)
-    expect(balancedCorrectPositions(0)).toEqual([])
+  it('handles zero and one question', async () => {
+    const { randomCorrectPositions } = await import('@/features/quiz/model')
+    expect(randomCorrectPositions(0)).toEqual([])
+    expect(randomCorrectPositions(1, seq(5))).toHaveLength(1)
   })
 })
