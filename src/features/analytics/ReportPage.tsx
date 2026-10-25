@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Printer } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Download, FileText, FileType, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { useToast } from '@/components/ui/Toast'
 import { Select } from '@/components/ui/Field'
 import { Alert } from '@/components/ui/Feedback'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -15,12 +16,13 @@ import { computeAnalytics } from './compute'
 import { buildRecommendations } from './recommendations'
 import { buildObjectiveGroups, buildStudentReports, describeObjectiveGroup } from './students'
 import { StudentReportView } from './StudentAnalysis'
+import { downloadReportDocx, downloadReportPdf, reportFilename, type ReportInput } from './exportReport'
 
 const MASTERY_LABEL = { strong: 'ათვისებულია', developing: 'ნაწილობრივ', weak: 'საჭიროებს გამეორებას', insufficient: 'მონაცემები არასაკმარისია' } as const
 
 /**
- * Printable / PDF-able report: class summary followed by one page per student.
- * "Save as PDF" is done with the browser's own print dialog (free, offline).
+ * Printable / downloadable report: class summary followed by one page per student.
+ * Print uses the browser dialog; PDF and Word files are generated in the browser.
  */
 export function ReportPage() {
   const { id = '' } = useParams()
@@ -28,6 +30,24 @@ export function ReportPage() {
   const scope = params.get('student') ?? 'all'
   const { profile } = useAuth()
   const { data, error, loading } = useAsync(() => loadSessionBundle(id), [id])
+  const toast = useToast()
+  const mainRef = useRef<HTMLElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [exporting, setExporting] = useState<'pdf' | 'docx' | null>(null)
+
+  useEffect(() => {
+    if (!menuOpen) return
+    const close = (e: MouseEvent | KeyboardEvent) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !menuRef.current?.contains(e.target as Node)) setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [menuOpen])
 
   const analytics = useMemo(() => (data ? computeAnalytics(data.questions, data.participants, data.answers) : null), [data])
   const reports = useMemo(() => (analytics ? buildStudentReports(analytics) : []), [analytics])
@@ -48,6 +68,35 @@ export function ReportPage() {
   const classSize = reports.filter((r) => r.answered > 0).length
   const showClass = scope === 'all' || scope === 'class'
   const students = scope === 'all' ? reports : scope === 'class' ? [] : reports.filter((r) => r.id === scope)
+
+  async function download(format: 'pdf' | 'docx') {
+    setMenuOpen(false)
+    setExporting(format)
+    const input: ReportInput = {
+      session,
+      teacherName: profile?.full_name ?? undefined,
+      school: profile?.school ?? undefined,
+      analytics: analytics!,
+      groups,
+      recommendations: recs,
+      students,
+      allStudents: reports,
+      includeClass: showClass,
+    }
+    try {
+      if (format === 'docx') await downloadReportDocx(input)
+      else {
+        const sections = Array.from(mainRef.current?.querySelectorAll<HTMLElement>('[data-report-section]') ?? [])
+        await downloadReportPdf(sections, reportFilename(input, 'pdf'))
+      }
+      toast.success(format === 'pdf' ? 'PDF ფაილი ჩამოიტვირთა.' : 'Word ფაილი ჩამოიტვირთა.')
+    } catch (e) {
+      console.error(e)
+      toast.error('ფაილის შექმნა ვერ მოხერხდა. სცადეთ თავიდან ან გამოიყენეთ „ბეჭდვა“.')
+    } finally {
+      setExporting(null)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 print:bg-white">
@@ -75,19 +124,59 @@ export function ReportPage() {
                 </option>
               ))}
             </Select>
-            <Button icon={<Printer className="size-4" />} onClick={() => window.print()}>
+            <Button variant="secondary" icon={<Printer className="size-4" />} onClick={() => window.print()}>
               ბეჭდვა / PDF-ად შენახვა
             </Button>
+            <div ref={menuRef} className="relative">
+              <Button
+                icon={<Download className="size-4" />}
+                loading={exporting !== null}
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                onClick={() => setMenuOpen((o) => !o)}
+              >
+                {exporting ? 'იქმნება…' : 'ჩამოტვირთვა'}
+                <ChevronDown className="size-4" aria-hidden />
+              </Button>
+              {menuOpen && (
+                <div role="menu" className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => download('pdf')}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                  >
+                    <FileText className="size-5 text-red-600" aria-hidden />
+                    <span>
+                      <span className="block font-semibold text-slate-900">PDF ფაილი</span>
+                      <span className="block text-xs text-slate-500">ზუსტად ისე, როგორც ეკრანზეა</span>
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => download('docx')}
+                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-slate-50"
+                  >
+                    <FileType className="size-5 text-blue-700" aria-hidden />
+                    <span>
+                      <span className="block font-semibold text-slate-900">Word ფაილი (.docx)</span>
+                      <span className="block text-xs text-slate-500">შეგიძლიათ შეცვალოთ ტექსტი</span>
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <p className="mx-auto max-w-4xl px-4 pb-3 text-xs text-slate-500">
-          PDF-ის შესანახად ბეჭდვის ფანჯარაში „Destination / დანიშნულება“ ველში აირჩიეთ <strong>Save as PDF</strong>.
+          „ჩამოტვირთვა“ ქმნის PDF ან Word ფაილს არჩეული შიგთავსით. ბეჭდვის ფანჯრიდანაც შეგიძლიათ PDF-ის შენახვა — აირჩიეთ <strong>Save as PDF</strong>.
         </p>
       </div>
 
-      <main className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8 print:max-w-none print:space-y-0 print:p-0">
+      <main ref={mainRef} className="mx-auto max-w-4xl space-y-6 p-4 sm:p-8 print:max-w-none print:space-y-0 print:p-0">
         {showClass && (
-          <section className="rounded-2xl bg-white p-6 shadow-card sm:p-10 print:rounded-none print:p-0 print:shadow-none">
+          <section data-report-section className="rounded-2xl bg-white p-6 shadow-card sm:p-10 print:rounded-none print:p-0 print:shadow-none">
             <header className="flex items-start justify-between gap-4 border-b border-slate-200 pb-5">
               <div>
                 <p className="text-sm font-semibold text-brand-700">შედეგების ანგარიში</p>
@@ -201,6 +290,7 @@ export function ReportPage() {
         {students.map((r, i) => (
           <section
             key={r.id}
+            data-report-section
             className={`rounded-2xl bg-white p-6 shadow-card sm:p-10 print:rounded-none print:p-0 print:shadow-none ${showClass || i > 0 ? 'print:break-before-page' : ''}`}
           >
             <p className="mb-4 border-b border-slate-200 pb-3 text-sm text-slate-500">

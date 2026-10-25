@@ -181,7 +181,7 @@ export function validateQuestion(q: DraftQuestion): QuestionIssues | null {
 
 // ---------------------------------------------------------------- shuffling
 // Language models tend to put the correct answer first. We shuffle answer
-// options and spread the correct answer evenly over ა/ბ/გ/დ.
+// options and give every question an independent random correct position.
 
 export type RandomFn = () => number
 
@@ -205,11 +205,17 @@ function shuffled<T>(items: T[], rand: RandomFn): T[] {
   return a
 }
 
-/** Target positions for the correct answer: each of 0..3 used as evenly as possible, in random order. */
-export function balancedCorrectPositions(count: number, rand: RandomFn = secureRandom): number[] {
-  const pool: number[] = []
-  while (pool.length < count) pool.push(...shuffled([0, 1, 2, 3], rand))
-  return shuffled(pool.slice(0, count), rand)
+/**
+ * Random target positions for the correct answer: each question independently
+ * gets ა/ბ/გ/დ (so 8 questions may give e.g. 1×ა, 3×გ, 2×დ, 2×ბ). The only
+ * thing avoided is the give-away case where 3+ questions all share one position.
+ */
+export function randomCorrectPositions(count: number, rand: RandomFn = secureRandom): number[] {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const out = Array.from({ length: count }, () => Math.min(3, Math.floor(rand() * 4)))
+    if (count < 3 || new Set(out).size > 1) return out
+  }
+  return Array.from({ length: count }, (_, i) => i % 4)
 }
 
 /** Reorder one question's options so the correct answer lands on `target`; notes move with their options. */
@@ -226,9 +232,9 @@ export function moveCorrectTo(q: DraftQuestion, target: number, rand: RandomFn =
   }
 }
 
-/** Shuffle answers of all questions with the correct answer spread evenly. */
+/** Shuffle answers of all questions; each correct answer lands on a random position. */
 export function shuffleAnswers(questions: DraftQuestion[], rand: RandomFn = secureRandom): DraftQuestion[] {
-  const targets = balancedCorrectPositions(questions.length, rand)
+  const targets = randomCorrectPositions(questions.length, rand)
   return questions.map((q, i) => moveCorrectTo(q, targets[i], rand))
 }
 
