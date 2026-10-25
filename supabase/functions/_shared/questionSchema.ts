@@ -23,6 +23,14 @@ export const generatedQuestionSchema = z
     explanation: z.string().transform(clean).pipe(z.string().min(1).max(1000)),
     topic: z.string().transform(clean).pipe(z.string().max(200)).default(''),
     objective_index: z.number().int().min(0).default(0),
+    /** Per option: what choosing this WRONG option reveals (empty for the correct one). */
+    // Lenient: notes are an optional extra, so a malformed list never rejects the question.
+    option_notes: z
+      .array(z.unknown())
+      .optional()
+      .transform((v) =>
+        [0, 1, 2, 3].map((i) => (typeof v?.[i] === 'string' ? clean(v[i] as string).slice(0, 300) : '')),
+      ),
   })
   .refine((q) => new Set(q.options.map((o) => o.toLowerCase())).size === 4, {
     message: 'პასუხები ერთმანეთისგან უნდა განსხვავდებოდეს',
@@ -71,8 +79,16 @@ export const geminiResponseJsonSchema = {
           explanation: { type: 'string' },
           topic: { type: 'string' },
           objective_index: { type: 'integer', minimum: 0 },
+          option_notes: {
+            type: 'array',
+            items: { type: 'string' },
+            minItems: 4,
+            maxItems: 4,
+            description:
+              'თითოეული პასუხისთვის (იგივე რიგით): რა ტიპურ შეცდომას ან მცდარ წარმოდგენას ნიშნავს ამ არასწორი პასუხის არჩევა. სწორი პასუხისთვის — ცარიელი სტრიქონი.',
+          },
         },
-        required: ['question', 'options', 'correct_index', 'explanation', 'topic', 'objective_index'],
+        required: ['question', 'options', 'correct_index', 'explanation', 'topic', 'objective_index', 'option_notes'],
       },
     },
   },
@@ -157,6 +173,7 @@ export function parseGeneratedQuestions(
     }
     seen.add(key)
     if (q.objective_index >= opts.objectiveCount) q.objective_index = 0
+    q.option_notes = q.option_notes.map((n, idx) => (idx === q.correct_index ? '' : n))
     questions.push(q)
     if (questions.length >= opts.maxQuestions) break
   }

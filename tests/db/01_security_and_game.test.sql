@@ -327,6 +327,9 @@ select tests.ok(public.calculate_points(true, 20000, 20000, true, 1000, 500) = 1
 select tests.ok(public.calculate_points(true, 10000, 20000, true, 1000, 500) = 1250, 'half time left = 1250');
 select tests.ok(public.calculate_points(true, 0, 20000, true, 1000, 500) = 1000, 'no time left = 1000');
 select tests.ok(public.calculate_points(true, 15000, 20000, false, 1000, 500) = 1000, 'speed bonus disabled = base only');
+select tests.ok(public.calculate_points(true, 20000, 20000, true, 1000, 100) = 1100, '100-point bonus: instant correct = 1100');
+select tests.ok(public.calculate_points(true, 10000, 20000, true, 1000, 100) = 1050, '100-point bonus: half time left = 1050');
+select tests.ok(public.calculate_points(true, 20000, 20000, false, 1000, 0) = 1000, 'no speed bonus: instant correct = base only');
 
 -- ---------------------------------------------------------------------
 -- Join rate limiting

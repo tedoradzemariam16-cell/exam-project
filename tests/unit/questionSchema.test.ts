@@ -122,3 +122,26 @@ describe('generationRequestSchema', () => {
     expect(generationRequestSchema.safeParse({ ...base, difficulty: 'extreme' }).success).toBe(false)
   })
 })
+
+describe('misconception notes from the AI', () => {
+  const opts = { maxQuestions: 5, objectiveCount: 1 }
+  it('keeps notes for wrong options and blanks the correct one', () => {
+    const r = parseGeneratedQuestions(
+      { questions: [{ ...valid, option_notes: ['არ უნდა დარჩეს', 'ერევა შემავალი და გამომავალი', 'ბ', 'გ'] }] },
+      opts,
+    )
+    expect(r.questions[0].option_notes).toEqual(['', 'ერევა შემავალი და გამომავალი', 'ბ', 'გ'])
+  })
+  it('missing or malformed notes never reject the question', () => {
+    expect(parseGeneratedQuestions({ questions: [valid] }, opts).questions[0].option_notes).toEqual(['', '', '', ''])
+    const short = parseGeneratedQuestions({ questions: [{ ...valid, option_notes: ['', 'მხოლოდ ერთი'] }] }, opts)
+    expect(short.questions[0].option_notes).toEqual(['', 'მხოლოდ ერთი', '', ''])
+    const junk = parseGeneratedQuestions({ questions: [{ ...valid, option_notes: [1, null, 'x'.repeat(400), 'ok'] }] }, opts)
+    expect(junk.questions[0].option_notes[2]).toHaveLength(300)
+    expect(junk.questions[0].option_notes[3]).toBe('ok')
+  })
+  it('asks the model for option_notes in the JSON schema', async () => {
+    const { geminiResponseJsonSchema } = await import('../../supabase/functions/_shared/questionSchema.ts')
+    expect(geminiResponseJsonSchema.properties.questions.items.required).toContain('option_notes')
+  })
+})
