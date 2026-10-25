@@ -35,6 +35,16 @@ export interface StudentMistake {
   explanation: string
 }
 
+/** A question the student saw but left without an answer (time ran out). */
+export interface StudentMissed {
+  position: number
+  question: string
+  topic: string
+  objective: string
+  correctIndex: number
+  correctText: string
+}
+
 export interface StudentReport {
   id: string
   name: string
@@ -44,8 +54,9 @@ export interface StudentReport {
   answered: number
   total: number
   mistakes: StudentMistake[]
-  /** positions of questions the student did not answer */
+  /** positions of questions the student did not answer (counted as wrong) */
   unanswered: number[]
+  missed: StudentMissed[]
   objectives: StudentObjective[]
   /** objectives that need work, weakest first */
   focus: StudentObjective[]
@@ -62,6 +73,12 @@ export const MASTERED_FROM = 0.75
 const pct = (r: number) => `${Math.round(r * 100)}%`
 const quote = (s: string, max = 80) => `„${s.length > max ? `${s.slice(0, max)}…` : s}“`
 
+/** "კითხვა 5-ზე" / "2 კითხვაზე (№ 3, 7)" */
+function questionRefs(positions: number[]): string {
+  const nums = positions.map((x) => x + 1)
+  return nums.length === 1 ? `კითხვა ${nums[0]}-ზე` : `${nums.length} კითხვაზე (№ ${nums.join(', ')})`
+}
+
 function statusOf(rate: number): ObjectiveStatus {
   if (rate >= MASTERED_FROM) return 'mastered'
   if (rate < NEEDS_WORK_BELOW) return 'needs_work'
@@ -72,10 +89,13 @@ export function buildStudentReport(a: SessionAnalytics, p: ParticipantRow): Stud
   const questions = a.questions
   const mistakes: StudentMistake[] = []
   const unanswered: number[] = []
+  const missed: StudentMissed[] = []
   const byObjective = new Map<string, { total: number; correct: number; answered: number }>()
   const byTopic = new Map<string, { mistakes: number; total: number }>()
 
   questions.forEach((q: QuestionStat, i) => {
+    // Questions never shown (game ended early) say nothing about the student.
+    if (!q.asked) return
     const sel = p.selections[i]
     const ok = sel !== null && sel === q.correctIndex
     if (q.objective.trim()) {
@@ -91,8 +111,17 @@ export function buildStudentReport(a: SessionAnalytics, p: ParticipantRow): Stud
       if (!ok) t.mistakes++
       byTopic.set(q.topic, t)
     }
-    if (sel === null) unanswered.push(q.position)
-    else if (!ok) {
+    if (sel === null) {
+      unanswered.push(q.position)
+      missed.push({
+        position: q.position,
+        question: q.text,
+        topic: q.topic,
+        objective: q.objective,
+        correctIndex: q.correctIndex,
+        correctText: q.options[q.correctIndex] ?? '',
+      })
+    } else if (!ok) {
       mistakes.push({
         position: q.position,
         question: q.text,
@@ -121,7 +150,7 @@ export function buildStudentReport(a: SessionAnalytics, p: ParticipantRow): Stud
     .map(([name, t]) => ({ name, ...t }))
     .sort((x, y) => y.mistakes / y.total - x.mistakes / x.total || y.mistakes - x.mistakes)
 
-  const total = questions.length
+  const total = questions.filter((q) => q.asked).length
   const name = `${p.firstName} ${p.lastName}`.trim()
 
   // ---- summary (teacher-facing) --------------------------------------------
@@ -139,11 +168,16 @@ export function buildStudentReport(a: SessionAnalytics, p: ParticipantRow): Stud
       parts.push(
         `ყველაზე მეტად გაუჭირდა შუალედური მიზანი ${quote(worst.name)} — ${worst.correct}/${worst.total} სწორი${worst.limited ? ' (მხოლოდ ერთი კითხვით შეფასებული)' : ''}.`,
       )
-    } else if (weakTopics[0]) {
+    } else if (weakTopics[0] && mistakes.length) {
       parts.push(`შეცდომები ძირითადად ქვეთემაში ${quote(weakTopics[0].name)} იყო.`)
     }
     const notes = [...new Set(mistakes.map((m) => m.note).filter(Boolean))]
     if (notes.length) parts.push(`შეცდომები მიუთითებს: ${notes.slice(0, 2).map((n) => quote(n, 120)).join('; ')}.`)
+    if (unanswered.length) {
+      parts.push(
+        `${questionRefs(unanswered)} პასუხი არ გაუცია — დრო ამოიწურა (ვერ მოასწრო ან არ იცოდა). შეფასებაში ${unanswered.length === 1 ? 'ეს კითხვა' : 'ეს კითხვები'} შეცდომად ითვლება.`,
+      )
+    }
     if (strengths.length) parts.push(`კარგად აქვს ათვისებული: ${strengths.map((s) => quote(s.name, 50)).join(', ')}.`)
   }
   if (p.answered > 0 && total > 0 && objectives.length > 0 && objectives.every((o) => o.limited)) {
@@ -156,8 +190,18 @@ export function buildStudentReport(a: SessionAnalytics, p: ParticipantRow): Stud
     // No evidence about knowledge — only a practical note, no teaching advice.
     recs.push('პასუხები არ არის. გადაამოწმეთ, შემოუერთდა თუ არა მოსწავლე თამაშს სწორად, ან შეაფასეთ სხვა გზით.')
   }
+  if (p.answered > 0 && unanswered.length) {
+    const many = unanswered.length >= Math.max(2, Math.ceil(total / 3))
+    recs.push(
+      `${questionRefs(unanswered)} პასუხი არ გაუცია — დრო ამოიწურა. ეს შეიძლება ნიშნავდეს, რომ ვერ მოასწრო ან არ იცოდა პასუხი; ` +
+        `ზეპირად ჰკითხეთ ${unanswered.length === 1 ? 'ეს კითხვა' : 'ეს კითხვები'}, რომ გაარკვიოთ.` +
+        (many ? ' უპასუხო კითხვები ბევრია — შესაძლოა დრო არ ჰყოფნის (სცადეთ მეტი დრო კითხვაზე) ან თამაშს გვიან შემოუერთდა.' : ''),
+    )
+  }
   for (const o of p.answered === 0 ? [] : focus.filter((o) => o.status === 'needs_work')) {
-    const topics = [...new Set(mistakes.filter((m) => m.objective === o.name).map((m) => m.topic).filter(Boolean))]
+    const topics = [
+      ...new Set([...mistakes, ...missed].filter((m) => m.objective === o.name).map((m) => m.topic).filter(Boolean)),
+    ]
     recs.push(
       `გაიმეორეთ მიზანი ${quote(o.name, 70)}${topics.length ? ` (ქვეთემა: ${topics.map((t) => quote(t, 40)).join(', ')})` : ''} და მიეცით 2–3 დამატებითი სავარჯიშო.`,
     )
@@ -174,9 +218,6 @@ export function buildStudentReport(a: SessionAnalytics, p: ParticipantRow): Stud
       recs.push(`გადახედეთ კითხვას ${m.position + 1}: აირჩია ${quote(m.chosenText, 40)}, სწორია ${quote(m.correctText, 40)}.`)
     }
   }
-  if (p.answered > 0 && unanswered.length >= Math.max(2, Math.ceil(total / 3))) {
-    recs.push(`${unanswered.length} კითხვას ვერ მოასწრო პასუხი — შესაძლოა დრო არ ეყო ან თამაშს გვიან შემოუერთდა.`)
-  }
   if (recs.length === 0 && p.answered > 0) {
     recs.push(strengths.length ? 'შესთავაზეთ უფრო რთული დავალებები ან შემდეგი თემა.' : 'განსაკუთრებული ჩარევა არ არის საჭირო.')
   }
@@ -191,6 +232,7 @@ export function buildStudentReport(a: SessionAnalytics, p: ParticipantRow): Stud
     total,
     mistakes,
     unanswered,
+    missed,
     objectives,
     focus,
     strengths,

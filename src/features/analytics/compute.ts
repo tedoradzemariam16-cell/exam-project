@@ -1,7 +1,7 @@
 // Deterministic learning analytics computed from one session's raw data.
 // No AI is involved: every number shown to the teacher comes from here.
 
-import type { AnswerRow, Participant, SessionQuestion } from '@/types/db'
+import type { AnswerRow, GameSession, Participant, SessionQuestion } from '@/types/db'
 
 /** Below these thresholds we say "not enough evidence" instead of concluding anything. */
 export const MIN_RESPONSES_PER_QUESTION = 3
@@ -20,9 +20,13 @@ export interface Overview {
   answerCount: number
   expectedAnswers: number
   correctCount: number
-  /** correct / submitted answers */
+  /** questions actually shown in the game (the teacher may end early) */
+  askedCount: number
+  /** correct / expected answers — an unanswered question counts as wrong */
   correctRate: number | null
-  /** submitted / (participants × questions) */
+  /** correct / submitted answers (ignores unanswered questions) */
+  answeredCorrectRate: number | null
+  /** submitted / (participants × asked questions) */
   responseRate: number | null
   /** share of participants who answered every question */
   completionRate: number | null
@@ -44,9 +48,14 @@ export interface QuestionStat {
   optionNotes: string[]
   explanation: string
   correctIndex: number
+  /** false when the game ended before this question was shown */
+  asked: boolean
+  /** submitted answers */
   responses: number
+  /** participants who saw the question but did not answer (time ran out) */
   noAnswer: number
   correct: number
+  /** correct / participants — an unanswered question counts as wrong */
   correctRate: number | null
   /** count per option index 0..3 */
   distribution: [number, number, number, number]
@@ -63,7 +72,8 @@ export interface QuestionStat {
 export interface GroupStat {
   name: string
   questionCount: number
-  responses: number
+  /** participants × questions, including unanswered (counted as wrong) */
+  attempts: number
   correct: number
   correctRate: number | null
   mastery: Mastery
@@ -79,6 +89,9 @@ export interface ParticipantRow {
   score: number
   correct: number
   answered: number
+  /** asked questions left without an answer */
+  unanswered: number
+  /** correct / asked questions — unanswered counts as wrong */
   accuracy: number | null
   /** selected option index per question position, null = no answer */
   selections: (number | null)[]
@@ -110,7 +123,7 @@ export function masteryOf(rate: number | null, responses: number): Mastery {
   return 'developing'
 }
 
-export function computeQuestionStat(q: SessionQuestion, answers: AnswerRow[], participantCount: number): QuestionStat {
+export function computeQuestionStat(q: SessionQuestion, answers: AnswerRow[], participantCount: number, asked = true): QuestionStat {
   const mine = answers.filter((a) => a.session_question_id === q.id)
   const distribution: [number, number, number, number] = [0, 0, 0, 0]
   for (const a of mine) if (a.selected_index >= 0 && a.selected_index <= 3) distribution[a.selected_index]++
@@ -124,7 +137,9 @@ export function computeQuestionStat(q: SessionQuestion, answers: AnswerRow[], pa
       topWrongIndex = i
     }
   })
-  const correctRate = ratio(correct, responses)
+  // Someone who saw the question and let the time run out did not show the
+  // knowledge, so the rate is over everyone, not only those who answered.
+  const correctRate = asked ? ratio(correct, Math.max(participantCount, responses)) : null
   const topWrongShare = ratio(topWrongCount, responses)
   const lowEvidence = responses < MIN_RESPONSES_PER_QUESTION
   const misconception = !lowEvidence && topWrongShare !== null && topWrongShare >= MISCONCEPTION_SHARE
@@ -138,8 +153,9 @@ export function computeQuestionStat(q: SessionQuestion, answers: AnswerRow[], pa
     optionNotes: [0, 1, 2, 3].map((i) => (i === q.correct_index ? '' : (q.option_notes?.[i] ?? '').trim())),
     explanation: q.explanation ?? '',
     correctIndex: q.correct_index,
+    asked,
     responses,
-    noAnswer: Math.max(0, participantCount - responses),
+    noAnswer: asked ? Math.max(0, participantCount - responses) : 0,
     correct,
     correctRate,
     distribution,
@@ -165,16 +181,16 @@ function groupBy(questions: QuestionStat[], key: (q: QuestionStat) => string): G
   }
   return [...map.entries()]
     .map(([name, qs]) => {
-      const responses = qs.reduce((s, q) => s + q.responses, 0)
+      const attempts = qs.reduce((s, q) => s + q.responses + q.noAnswer, 0)
       const correct = qs.reduce((s, q) => s + q.correct, 0)
-      const correctRate = ratio(correct, responses)
+      const correctRate = ratio(correct, attempts)
       return {
         name,
         questionCount: qs.length,
-        responses,
+        attempts,
         correct,
         correctRate,
-        mastery: masteryOf(correctRate, responses),
+        mastery: masteryOf(correctRate, attempts),
         questionPositions: [...qs]
           .sort((a, b) => (a.correctRate ?? 1) - (b.correctRate ?? 1))
           .map((q) => q.position),
@@ -183,16 +199,36 @@ function groupBy(questions: QuestionStat[], key: (q: QuestionStat) => string): G
     .sort((a, b) => (a.correctRate ?? 2) - (b.correctRate ?? 2))
 }
 
+/**
+ * How many questions the students have already seen and could answer. A game
+ * the teacher ended early leaves later questions unasked; a question that is
+ * still running does not count yet.
+ */
+export function askedQuestionCount(
+  s: Pick<GameSession, 'status' | 'current_index' | 'question_ends_at' | 'paused_remaining_ms'>,
+  now = Date.now(),
+): number {
+  const shown = Math.max(0, s.current_index + 1)
+  if (s.status === 'lobby') return 0
+  if (s.status === 'finished') return shown
+  const running = s.paused_remaining_ms !== null || (s.question_ends_at !== null && Date.parse(s.question_ends_at) > now)
+  return running ? Math.max(0, shown - 1) : shown
+}
+
 export function computeAnalytics(
   questions: SessionQuestion[],
   participants: Participant[],
   answers: AnswerRow[],
+  /** questions shown so far (session.current_index + 1); defaults to all */
+  askedCount?: number,
 ): SessionAnalytics {
   const sortedQ = [...questions].sort((a, b) => a.position - b.position)
+  const asked = Math.min(sortedQ.length, Math.max(0, askedCount ?? sortedQ.length))
   const participantIds = new Set(participants.map((p) => p.id))
   // Ignore answers of removed participants.
   const valid = answers.filter((a) => participantIds.has(a.participant_id))
-  const qStats = sortedQ.map((q) => computeQuestionStat(q, valid, participants.length))
+  const qStats = sortedQ.map((q, i) => computeQuestionStat(q, valid, participants.length, i < asked))
+  const askedQ = qStats.filter((q) => q.asked)
 
   // Participant rows — computed from answers, not trusted totals.
   const byParticipant = new Map<string, AnswerRow[]>()
@@ -214,7 +250,8 @@ export function computeAnalytics(
       score: list.reduce((s, a) => s + a.points, 0),
       correct,
       answered: list.length,
-      accuracy: ratio(correct, list.length),
+      unanswered: Math.max(0, askedQ.length - list.length),
+      accuracy: ratio(correct, Math.max(askedQ.length, list.length)),
       selections,
     }
   })
@@ -227,19 +264,21 @@ export function computeAnalytics(
   const scores = rows.map((r) => r.score)
   const answerCount = valid.length
   const correctCount = valid.filter((a) => a.is_correct).length
-  const expected = participants.length * sortedQ.length
+  const expected = participants.length * askedQ.length
 
   const overview: Overview = {
     participantCount: participants.length,
     questionCount: sortedQ.length,
+    askedCount: askedQ.length,
     answerCount,
     expectedAnswers: expected,
     correctCount,
-    correctRate: ratio(correctCount, answerCount),
+    correctRate: ratio(correctCount, Math.max(expected, answerCount)),
+    answeredCorrectRate: ratio(correctCount, answerCount),
     responseRate: ratio(answerCount, expected),
     completionRate:
-      participants.length > 0 && sortedQ.length > 0
-        ? rows.filter((r) => r.answered >= sortedQ.length).length / participants.length
+      participants.length > 0 && askedQ.length > 0
+        ? rows.filter((r) => r.answered >= askedQ.length).length / participants.length
         : null,
     averageScore: scores.length ? scores.reduce((s, x) => s + x, 0) / scores.length : null,
     medianScore: median(scores),
@@ -251,8 +290,8 @@ export function computeAnalytics(
   return {
     overview,
     questions: qStats,
-    objectives: groupBy(qStats, (q) => q.objective),
-    topics: groupBy(qStats, (q) => q.topic),
+    objectives: groupBy(askedQ, (q) => q.objective),
+    topics: groupBy(askedQ, (q) => q.topic),
     participants: rows,
     scoreBuckets: scoreHistogram(scores),
   }

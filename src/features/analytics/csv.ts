@@ -37,7 +37,11 @@ export function resultsCsv(a: SessionAnalytics, reports?: StudentReport[]): stri
     p.answered,
     p.accuracy === null ? '' : Math.round(p.accuracy * 100),
     ...p.selections.map((sel, i) =>
-      sel === null ? '—' : `${optionLabel(sel)}${sel === a.questions[i].correctIndex ? ' ✓' : ' ✗'}`,
+      sel === null
+        ? a.questions[i].asked
+          ? 'უპასუხო ✗'
+          : '—'
+        : `${optionLabel(sel)}${sel === a.questions[i].correctIndex ? ' ✓' : ' ✗'}`,
     ),
     ...(reports
       ? [
