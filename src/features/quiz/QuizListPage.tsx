@@ -29,7 +29,7 @@ const statusTone = (s: QuizStatus) => (s === 'published' ? 'green' : s === 'draf
 export function QuizListPage() {
   const toast = useToast()
   const navigate = useNavigate()
-  const { data, error, loading, reload } = useAsync(listQuizzes, [])
+  const { data, error, loading, reload } = useAsync(() => listQuizzes(), [])
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
   const [busy, setBusy] = useState<string | null>(null)

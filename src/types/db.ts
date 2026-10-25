@@ -10,7 +10,12 @@ export interface Profile {
   full_name: string
   school: string
   created_at: string
+  /** Absent on databases without the approval migration — treat as approved. */
+  status?: TeacherStatus
+  is_admin?: boolean
 }
+
+export type TeacherStatus = 'pending' | 'approved' | 'rejected'
 
 export interface Quiz {
   id: string

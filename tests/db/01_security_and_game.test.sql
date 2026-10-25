@@ -43,6 +43,8 @@ insert into auth.users (id, is_anonymous) values
   ('5aaaaaaa-0000-0000-0000-000000000001', true),
   ('5bbbbbbb-0000-0000-0000-000000000002', true),
   ('5ccccccc-0000-0000-0000-000000000003', true);
+-- New teachers start as 'pending'; these test teachers are approved.
+update public.profiles set status = 'approved';
 
 select tests.ok((select count(*) from public.profiles) = 2, 'profiles created only for non-anonymous users');
 select tests.ok((select full_name from public.profiles where id = 'aaaaaaaa-0000-0000-0000-000000000001') = 'მასწავლებელი ა',
@@ -152,7 +154,7 @@ reset role;
 select set_config('request.jwt.claims', '{"sub":"5aaaaaaa-0000-0000-0000-000000000001","is_anonymous":true}', false);
 set role authenticated;
 select tests.ok((select count(*) from public.quizzes) = 0, 'student cannot read quizzes');
-select tests.throws($$insert into public.quizzes (title) values ('student quiz')$$, 'row-level security', 'student cannot create quizzes');
+select tests.throws($$insert into public.quizzes (title) values ('student quiz')$$, 'NOT_APPROVED', 'student cannot create quizzes');
 select tests.ok(public.join_game('000000', 'ნინო', 'ბერიძე') ->> 'error' = 'SESSION_NOT_FOUND', 'wrong code is rejected');
 select tests.ok(public.join_game('12ab', 'ნინო', 'ბერიძე') ->> 'error' = 'INVALID_CODE', 'malformed code is rejected');
 select tests.ok(public.join_game((select v from tests.ctx where k = 'code'), '', 'ბერიძე') ->> 'error' = 'INVALID_NAME', 'empty name is rejected');

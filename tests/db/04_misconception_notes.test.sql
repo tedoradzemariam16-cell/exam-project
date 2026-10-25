@@ -2,6 +2,8 @@
 \set ON_ERROR_STOP 1
 insert into auth.users (id, email) values ('dddddddd-0000-0000-0000-000000000004', 'd@school.ge');
 insert into auth.users (id, is_anonymous) values ('5ddddddd-0000-0000-0000-000000000004', true);
+-- New teachers start as 'pending'; these test teachers are approved.
+update public.profiles set status = 'approved';
 
 select set_config('request.jwt.claims', '{"sub":"dddddddd-0000-0000-0000-000000000004"}', false);
 set role authenticated;

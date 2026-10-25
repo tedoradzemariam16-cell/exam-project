@@ -10,12 +10,15 @@ import {
   PlayCircle,
   PlusCircle,
   Settings,
+  ShieldCheck,
   X,
 } from 'lucide-react'
 import { Logo } from '@/components/Logo'
 import { PageLoader } from '@/components/ui/Spinner'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { cn } from '@/lib/cn'
+import { useAsync } from '@/lib/useAsync'
+import { listTeachers } from '@/features/admin/api'
 
 const NAV = [
   { to: '/app', label: 'მთავარი დაფა', icon: LayoutDashboard, end: true },
@@ -27,10 +30,13 @@ const NAV = [
   { to: '/app/settings', label: 'ანგარიშის პარამეტრები', icon: Settings, end: true },
 ]
 
-function NavItems({ onNavigate }: { onNavigate?: () => void }) {
+const ADMIN_NAV = { to: '/app/admin', label: 'ადმინისტრირება', icon: ShieldCheck, end: false }
+
+function NavItems({ onNavigate, isAdmin, pending }: { onNavigate?: () => void; isAdmin?: boolean; pending?: number }) {
+  const items = isAdmin ? [...NAV, ADMIN_NAV] : NAV
   return (
     <ul className="space-y-1">
-      {NAV.map((item) => (
+      {items.map((item) => (
         <li key={item.to}>
           <NavLink
             to={item.to}
@@ -45,6 +51,11 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
           >
             <item.icon className="size-5 shrink-0" aria-hidden />
             {item.label}
+            {item === ADMIN_NAV && pending ? (
+              <span className="ml-auto rounded-full bg-accent-500 px-2 py-0.5 text-xs font-bold text-slate-950" aria-label={`${pending} ახალი მოთხოვნა`}>
+                {pending}
+              </span>
+            ) : null}
           </NavLink>
         </li>
       ))}
@@ -55,6 +66,12 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 export function TeacherLayout() {
   const { profile, session, signOut } = useAuth()
   const location = useLocation()
+  const isAdmin = !!profile?.is_admin
+  // Pending registrations badge; refreshed on every navigation.
+  const pendingCount = useAsync(
+    async () => (isAdmin ? (await listTeachers()).filter((t) => t.status === 'pending').length : 0),
+    [isAdmin, location.pathname],
+  )
   // The mobile menu closes automatically on navigation: it is "open" only
   // for the path where it was opened.
   const [openOn, setOpenOn] = useState<string | null>(null)
@@ -90,7 +107,7 @@ export function TeacherLayout() {
           <Logo to="/app" />
         </div>
         <nav className="flex-1 overflow-y-auto px-3" aria-label="მასწავლებლის მენიუ">
-          <NavItems />
+          <NavItems isAdmin={isAdmin} pending={pendingCount.data} />
         </nav>
         {userBox}
       </aside>
@@ -125,7 +142,7 @@ export function TeacherLayout() {
               </button>
             </div>
             <nav className="flex-1 overflow-y-auto px-3" aria-label="მასწავლებლის მენიუ">
-              <NavItems onNavigate={() => setOpen(false)} />
+              <NavItems onNavigate={() => setOpen(false)} isAdmin={isAdmin} pending={pendingCount.data} />
             </nav>
             {userBox}
           </aside>
