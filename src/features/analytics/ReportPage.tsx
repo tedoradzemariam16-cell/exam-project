@@ -6,7 +6,7 @@ import { useToast } from '@/components/ui/Toast'
 import { Select } from '@/components/ui/Field'
 import { Alert } from '@/components/ui/Feedback'
 import { PageLoader } from '@/components/ui/Spinner'
-import { LogoMark } from '@/components/Logo'
+import { SchoolWordmark } from '@/components/Logo'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { toGeorgianMessage } from '@/lib/errors'
 import { formatDateTime, formatNumber, formatPercent } from '@/lib/format'
@@ -193,7 +193,7 @@ export function ReportPage() {
                   </p>
                 )}
               </div>
-              <LogoMark className="size-11 shrink-0" />
+              <SchoolWordmark className="h-10 shrink-0" />
             </header>
 
             <h2 className="mt-6 text-lg font-bold text-slate-900">კლასის შეჯამება</h2>
