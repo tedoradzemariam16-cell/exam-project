@@ -1,6 +1,8 @@
 -- A teacher can delete only their own account; everything they own goes with it.
 \set ON_ERROR_STOP 1
 insert into auth.users (id, email) values ('cccccccc-0000-0000-0000-000000000003', 'c@school.ge');
+-- New teachers start as 'pending'; these test teachers are approved.
+update public.profiles set status = 'approved';
 insert into public.quizzes (teacher_id, title) values ('cccccccc-0000-0000-0000-000000000003', 'C-ს ქვიზი');
 insert into public.game_sessions (teacher_id, code, title, question_count, speed_bonus, base_points, max_speed_bonus, status)
 values ('cccccccc-0000-0000-0000-000000000003', '333333', 'C', 1, true, 1000, 500, 'finished');

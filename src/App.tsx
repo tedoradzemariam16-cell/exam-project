@@ -26,6 +26,9 @@ const SessionResultsPage = lazy(() =>
   import('@/features/analytics/SessionResultsPage').then((m) => ({ default: m.SessionResultsPage })),
 )
 const HostPage = lazy(() => import('@/features/game/HostPage').then((m) => ({ default: m.HostPage })))
+const AdminTeachersPage = lazy(() => import('@/features/admin/AdminPages').then((m) => ({ default: m.AdminTeachersPage })))
+const AdminTeacherPage = lazy(() => import('@/features/admin/AdminPages').then((m) => ({ default: m.AdminTeacherPage })))
+const AdminQuizPage = lazy(() => import('@/features/admin/AdminPages').then((m) => ({ default: m.AdminQuizPage })))
 const ReportPage = lazy(() => import('@/features/analytics/ReportPage').then((m) => ({ default: m.ReportPage })))
 import { JoinPage } from '@/features/student/JoinPage'
 import { PlayPage } from '@/features/student/PlayPage'
@@ -85,6 +88,9 @@ const router = createBrowserRouter([
           { path: 'analytics', element: <AnalyticsIndexPage /> },
           { path: 'analytics/:id', element: <SessionResultsPage /> },
           { path: 'settings', element: <SettingsPage /> },
+          { path: 'admin', element: <AdminTeachersPage /> },
+          { path: 'admin/teachers/:id', element: <AdminTeacherPage /> },
+          { path: 'admin/quizzes/:id', element: <AdminQuizPage /> },
         ],
       },
       { path: '*', element: <NotFoundPage /> },
