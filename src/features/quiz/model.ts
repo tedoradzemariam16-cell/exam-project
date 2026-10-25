@@ -37,6 +37,18 @@ export interface DraftQuestion {
 
 export const MAX_MATERIAL_STORED = 60000
 export const TIME_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120]
+/** Speed-bonus choices shown to the teacher; 0 = no extra points for speed. */
+export const SPEED_BONUS_OPTIONS = [0, 100, 250, 500, 1000]
+
+/** The single "speed bonus" value the editor shows (0 when the bonus is switched off). */
+export function speedBonusValue(s: Pick<QuizSettings, 'speedBonus' | 'maxSpeedBonus'>): number {
+  return s.speedBonus ? s.maxSpeedBonus : 0
+}
+
+/** Settings patch for a chosen speed-bonus value. */
+export function speedBonusPatch(value: number): Pick<QuizSettings, 'speedBonus' | 'maxSpeedBonus'> {
+  return value > 0 ? { speedBonus: true, maxSpeedBonus: value } : { speedBonus: false, maxSpeedBonus: 0 }
+}
 
 export const DEFAULT_SETTINGS: QuizSettings = {
   title: '',

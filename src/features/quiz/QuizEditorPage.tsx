@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { Badge, Card, CardBody, CardHeader, PageHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Field, Input, Select, Switch, Textarea } from '@/components/ui/Field'
+import { Field, Input, Select, Textarea } from '@/components/ui/Field'
 import { Alert, EmptyState } from '@/components/ui/Feedback'
 import { ConfirmDialog, Modal } from '@/components/ui/Dialog'
 import { PageLoader } from '@/components/ui/Spinner'
@@ -33,6 +33,7 @@ import { MaterialInput } from './MaterialInput'
 import { QuestionCard } from './QuestionCard'
 import {
   DEFAULT_SETTINGS,
+  SPEED_BONUS_OPTIONS,
   TIME_OPTIONS,
   collectErrors,
   draftSettingsSchema,
@@ -41,6 +42,8 @@ import {
   fromLoaded,
   generationSettingsSchema,
   objectivesOf,
+  speedBonusPatch,
+  speedBonusValue,
   validateQuestion,
   type DraftQuestion,
   type FieldErrors,
@@ -465,30 +468,39 @@ export function QuizEditorPage() {
                   <option value={2000}>2000 (ორმაგი)</option>
                 </Select>
               </Field>
-              <Field label="მაქსიმალური ბონუსი სისწრაფისთვის" error={errors.maxSpeedBonus}>
+              <Field
+                label="ბონუსი სისწრაფისთვის"
+                error={errors.maxSpeedBonus}
+                hint="სწრაფად გაცემული სწორი პასუხი დამატებით ქულას იღებს"
+              >
                 <Select
-                  value={settings.maxSpeedBonus}
-                  disabled={!settings.speedBonus}
-                  onChange={(e) => patch({ maxSpeedBonus: Number(e.target.value) })}
+                  value={speedBonusValue(settings)}
+                  onChange={(e) => patch(speedBonusPatch(Number(e.target.value)))}
                 >
-                  <option value={250}>250</option>
-                  <option value={500}>500 (სტანდარტული)</option>
-                  <option value={1000}>1000</option>
+                  {[...new Set([...SPEED_BONUS_OPTIONS, speedBonusValue(settings)])]
+                    .sort((a, b) => a - b)
+                    .map((v) => (
+                      <option key={v} value={v}>
+                        {v === 0 ? 'არ ემატება' : v === 500 ? 'მაქსიმუმ 500 (სტანდარტული)' : `მაქსიმუმ ${v}`}
+                      </option>
+                    ))}
                 </Select>
               </Field>
-              <div className="flex items-end pb-2">
-                <Switch
-                  checked={settings.speedBonus}
-                  onChange={(v) => patch({ speedBonus: v })}
-                  label="ბონუსი სისწრაფისთვის"
-                  description="ადრე გაცემული სწორი პასუხი მეტ ქულას იღებს"
-                />
-              </div>
               <p className="flex gap-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-600 md:col-span-3">
                 <Info className="mt-0.5 size-4 shrink-0 text-brand-700" aria-hidden />
                 <span>
-                  არასწორი პასუხი — 0 ქულა. მაგალითად, სწორი პასუხი, გაცემული დროის ნახევარზე: <strong>{formatNumber(examplePoints)}</strong>{' '}
-                  ქულა. ქულებს სერვერი ითვლის.
+                  არასწორი პასუხი — 0 ქულა.{' '}
+                  {settings.speedBonus ? (
+                    <>
+                      მაგალითად, სწორი პასუხი, გაცემული დროის ნახევარზე: <strong>{formatNumber(examplePoints)}</strong> ქულა.
+                    </>
+                  ) : (
+                    <>
+                      ყველა სწორი პასუხი იღებს ზუსტად <strong>{formatNumber(settings.basePoints)}</strong> ქულას, სისწრაფის
+                      მიუხედავად.
+                    </>
+                  )}{' '}
+                  ქულებს სერვერი ითვლის.
                 </span>
               </p>
             </CardBody>
