@@ -11,6 +11,7 @@ import {
   PlayCircle,
   Save,
   Send,
+  Shuffle,
   Sparkles,
   Target,
   Undo2,
@@ -41,7 +42,10 @@ import {
   fromGenerated,
   fromLoaded,
   generationSettingsSchema,
+  moveCorrectTo,
   objectivesOf,
+  secureRandom,
+  shuffleAnswers,
   speedBonusPatch,
   speedBonusValue,
   validateQuestion,
@@ -211,7 +215,8 @@ export function QuizEditorPage() {
         difficulty: settings.difficulty,
         existingQuestions: mode === 'append' ? questions.map((q) => q.text).slice(0, 30) : [],
       })
-      const generated = res.questions.map(fromGenerated)
+      // Models tend to put the correct answer first — shuffle and spread it over ა/ბ/გ/დ.
+      const generated = shuffleAnswers(res.questions.map(fromGenerated))
       setQuestionsDirty((qs) => (mode === 'append' ? [...qs, ...generated] : generated))
       setReviewed(false)
       setTab('questions')
@@ -255,7 +260,7 @@ export function QuizEditorPage() {
         difficulty: settings.difficulty,
         existingQuestions: questions.map((q) => q.text).filter(Boolean).slice(0, 30),
       })
-      const fresh = fromGenerated(res.questions[0])
+      const fresh = moveCorrectTo(fromGenerated(res.questions[0]), Math.floor(secureRandom() * 4))
       setQuestionsDirty((qs) =>
         qs.map((q) => (q.key === key ? { ...fresh, key, timeLimitSeconds: target?.timeLimitSeconds ?? null } : q)),
       )
@@ -558,6 +563,28 @@ export function QuizEditorPage() {
             )}
           </Card>
 
+          {questions.length >= 3 && questions.every((q) => q.correctIndex === questions[0].correctIndex) && (
+            <Alert
+              tone="warning"
+              title="ყველა სწორი პასუხი ერთსა და იმავე ადგილზეა"
+              action={
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<Shuffle className="size-4" />}
+                  onClick={() => {
+                    setQuestionsDirty((qs) => shuffleAnswers(qs))
+                    toast.success('პასუხების რიგი აირია. არ დაგავიწყდეთ შენახვა.')
+                  }}
+                >
+                  პასუხების არევა
+                </Button>
+              }
+            >
+              მოსწავლეები ამას სწრაფად შეამჩნევენ. აურიეთ პასუხები — სწორი პასუხი თანაბრად გადანაწილდება ა/ბ/გ/დ-ზე.
+            </Alert>
+          )}
+
           {questions.length > 0 && unreviewedAi > 0 && (
             <Alert tone="info" title="გადახედეთ AI-ის მიერ შექმნილ კითხვებს">
               AI შეიძლება შეცდეს. გამოქვეყნებამდე შეამოწმეთ ფაქტები, სწორი პასუხი და ფორმულირება. ნებისმიერი ველი
@@ -608,13 +635,26 @@ export function QuizEditorPage() {
           )}
 
           <div className="flex flex-wrap justify-between gap-2">
-            <Button
+            <div className="flex flex-wrap gap-2">
+              <Button
               variant="secondary"
               disabled={questions.length >= 30}
               onClick={() => setQuestionsDirty((qs) => [...qs, emptyQuestion()])}
             >
               + კითხვის დამატება
             </Button>
+              <Button
+                variant="secondary"
+                icon={<Shuffle className="size-4" />}
+                disabled={questions.length === 0}
+                onClick={() => {
+                  setQuestionsDirty((qs) => shuffleAnswers(qs))
+                  toast.success('პასუხების რიგი აირია — სწორი პასუხები თანაბრად გადანაწილდა ა/ბ/გ/დ-ზე. არ დაგავიწყდეთ შენახვა.')
+                }}
+              >
+                პასუხების არევა
+              </Button>
+            </div>
             <Button
               onClick={() => {
                 setShowQuestionIssues(true)
