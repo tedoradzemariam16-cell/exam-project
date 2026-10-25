@@ -1,5 +1,5 @@
 import { useId } from 'react'
-import { AlertTriangle, CheckCircle2, CircleDashed, Lightbulb, Target, UserRound, Users, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, CircleDashed, Clock, Lightbulb, Target, UserRound, Users, XCircle } from 'lucide-react'
 import { Badge, Card, CardBody, CardHeader } from '@/components/ui/Card'
 import { Select } from '@/components/ui/Field'
 import { cn } from '@/lib/cn'
@@ -96,7 +96,7 @@ export function StudentReportView({ report: r, compact }: { report: StudentRepor
           <h3 className="text-xl font-bold text-slate-900">{r.name}</h3>
           <p className="text-sm text-slate-500">
             {r.rank} ადგილი · {formatNumber(r.score)} ქულა · სწორი {r.correct}/{r.total}
-            {r.unanswered.length > 0 && ` · უპასუხოდ ${r.unanswered.length}`}
+            {r.unanswered.length > 0 && ` · უპასუხოდ ${r.unanswered.length} (შეცდომად)`}
           </p>
         </div>
         {r.focus.length === 0 && r.answered > 0 ? (
@@ -180,6 +180,39 @@ export function StudentReportView({ report: r, compact }: { report: StudentRepor
                     {[m.objective && `მიზანი: ${m.objective}`, m.topic && `ქვეთემა: ${m.topic}`].filter(Boolean).join(' · ')}
                   </p>
                 )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {r.missed.length > 0 && (
+        <section>
+          <h4 className="mb-2 text-sm font-bold text-slate-800">უპასუხოდ დარჩა — დრო ამოიწურა</h4>
+          <ul className="space-y-3">
+            {r.missed.map((m) => (
+              <li key={m.position} className="rounded-xl border border-dashed border-slate-300 p-3 text-sm">
+                <p className="font-semibold text-slate-900">
+                  <span className="text-brand-700">{m.position + 1}.</span> {m.question}
+                </p>
+                <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
+                  <p className="flex items-center gap-2 text-slate-600">
+                    <Clock className="size-4 shrink-0" aria-hidden />
+                    <span>პასუხი არ აურჩევია</span>
+                  </p>
+                  <p className="flex items-center gap-2 text-green-800">
+                    <CheckCircle2 className="size-4 shrink-0" aria-hidden />
+                    <AnswerBadge index={m.correctIndex} className="size-5" />
+                    <span>
+                      <span className="sr-only">სწორი პასუხი: </span>
+                      {m.correctText}
+                    </span>
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-slate-500">
+                  ვერ მოასწრო ან არ იცოდა — შეფასებაში შეცდომად ითვლება.
+                  {!compact && m.objective && ` მიზანი: ${m.objective}`}
+                </p>
               </li>
             ))}
           </ul>

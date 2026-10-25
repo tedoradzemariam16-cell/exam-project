@@ -88,6 +88,27 @@ describe('per-student report', () => {
     expect(r.objectives.find((o) => o.name === 'მიზანი A')).toMatchObject({ answered: 0, correct: 0, status: 'needs_work' })
   })
 
+  it('explains a question left unanswered: time ran out — did not manage or did not know', () => {
+    const ten = Array.from({ length: 10 }, (_, i) => q(i, 0, 'მიზანი A', 'თემა'))
+    const r10 = computeAnalytics(ten, [p(1)], ten.filter((_, i) => i !== 4).map((qq) => a(1, qq, 0)))
+    const r = buildStudentReport(r10, r10.participants[0])
+    expect(r).toMatchObject({ correct: 9, total: 10, unanswered: [4] })
+    expect(r.missed).toEqual([expect.objectContaining({ position: 4, correctText: 'ჟანგბადი' })])
+    expect(r.summary).toContain('სწორად უპასუხა 9 კითხვას 10-დან')
+    expect(r.summary).toContain('კითხვა 5-ზე პასუხი არ გაუცია — დრო ამოიწურა (ვერ მოასწრო ან არ იცოდა)')
+    expect(r.summary).toContain('შეცდომად ითვლება')
+    expect(r.summary).not.toContain('ყველა კითხვას')
+    expect(r.recommendations[0]).toContain('ვერ მოასწრო ან არ იცოდა')
+    expect(r.objectives[0]).toMatchObject({ correct: 9, total: 10 })
+  })
+
+  it('ignores questions the game never reached', () => {
+    const r2 = computeAnalytics(Q, P, A.filter((x) => x.session_question_id !== 'q2'), 2)
+    const r = buildStudentReport(r2, r2.participants.find((x) => x.id === 'p1')!)
+    expect(r).toMatchObject({ total: 2, unanswered: [], missed: [] })
+    expect(r.summary).toContain('ყველა კითხვას (2) სწორად')
+  })
+
   it('handles a student who answered nothing', () => {
     const empty = computeAnalytics(Q, [p(9)], [])
     const r = buildStudentReport(empty, empty.participants[0])

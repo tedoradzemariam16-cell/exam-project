@@ -53,7 +53,7 @@ export function buildRecommendations(a: SessionAnalytics, maxItems = 8): Recomme
       kind: 'reteach_objective',
       severity: 'high',
       title: `ხელახლა ახსენით: ${quote(o.name, 70)}`,
-      detail: `ამ მიზანთან დაკავშირებულ ${o.questionCount} კითხვაზე სწორი პასუხების წილი მხოლოდ ${pct(o.correctRate)} იყო (${o.correct}/${o.responses}). განსაკუთრებით გადახედეთ ${questionList(o)}.`,
+      detail: `ამ მიზანთან დაკავშირებულ ${o.questionCount} კითხვაზე სწორი პასუხების წილი მხოლოდ ${pct(o.correctRate)} იყო (${o.correct}/${o.attempts}). განსაკუთრებით გადახედეთ ${questionList(o)}.`,
     })
   }
   for (const o of developing) {
@@ -61,7 +61,7 @@ export function buildRecommendations(a: SessionAnalytics, maxItems = 8): Recomme
       kind: 'practice_objective',
       severity: 'medium',
       title: `დამატებითი სავარჯიშოები: ${quote(o.name, 70)}`,
-      detail: `სწორი პასუხები — ${pct(o.correctRate)} (${o.correct}/${o.responses}). მიზანი ნაწილობრივ ათვისებულია; სასარგებლო იქნება მოკლე პრაქტიკული დავალებები.`,
+      detail: `სწორი პასუხები — ${pct(o.correctRate)} (${o.correct}/${o.attempts}). მიზანი ნაწილობრივ ათვისებულია; სასარგებლო იქნება მოკლე პრაქტიკული დავალებები.`,
     })
   }
 
@@ -73,7 +73,7 @@ export function buildRecommendations(a: SessionAnalytics, maxItems = 8): Recomme
       kind: 'weak_topic',
       severity: 'medium',
       title: `სუსტი ქვეთემა: ${quote(t.name, 70)}`,
-      detail: `მოსწავლეები ამ ქვეთემაზე ხშირად ცდებოდნენ: სწორი პასუხები — ${pct(t.correctRate)} (${t.correct}/${t.responses}).`,
+      detail: `მოსწავლეები ამ ქვეთემაზე ხშირად ცდებოდნენ: სწორი პასუხები — ${pct(t.correctRate)} (${t.correct}/${t.attempts}).`,
     })
   }
 
@@ -100,12 +100,18 @@ export function buildRecommendations(a: SessionAnalytics, maxItems = 8): Recomme
     }
   }
 
-  if (overview.responseRate !== null && overview.responseRate < 0.7 && overview.expectedAnswers >= 10) {
+  const missing = overview.expectedAnswers - overview.answerCount
+  if (missing > 0) {
+    const where = a.questions.filter((q) => q.noAnswer > 0).map((q) => q.position + 1)
+    const many = overview.responseRate !== null && overview.responseRate < 0.7 && overview.expectedAnswers >= 10
     out.push({
       kind: 'time_pressure',
-      severity: 'low',
-      title: 'ბევრმა მოსწავლემ ვერ მოასწრო პასუხი',
-      detail: `მოსალოდნელი პასუხების მხოლოდ ${pct(overview.responseRate)} იქნა გაცემული. განიხილეთ კითხვის დროის გაზრდა ან ტექსტის შემოკლება.`,
+      severity: many ? 'low' : 'info',
+      title: many ? 'ბევრმა მოსწავლემ ვერ მოასწრო პასუხი' : 'ზოგიერთ კითხვაზე პასუხი არ გაცემულა',
+      detail:
+        `${missing} შემთხვევაში დრო ამოიწურა და პასუხი არ აურჩევიათ (კითხვები: ${where.join(', ')}). ` +
+        'ეს შეიძლება ნიშნავდეს, რომ მოსწავლემ ვერ მოასწრო ან არ იცოდა პასუხი; შეფასებაში ასეთი კითხვა შეცდომად ითვლება. ' +
+        (many ? 'განიხილეთ კითხვის დროის გაზრდა ან ტექსტის შემოკლება.' : 'ვინ რომელ კითხვაზე — იხილეთ თითოეული მოსწავლის ანალიზში.'),
     })
   }
 
@@ -114,7 +120,7 @@ export function buildRecommendations(a: SessionAnalytics, maxItems = 8): Recomme
       kind: 'objective_mastered',
       severity: 'low',
       title: `კარგად ათვისებულია: ${quote(o.name, 70)}`,
-      detail: `სწორი პასუხები — ${pct(o.correctRate)} (${o.correct}/${o.responses}). შეგიძლიათ გადახვიდეთ შემდეგ მიზანზე ან შესთავაზოთ უფრო რთული დავალებები.`,
+      detail: `სწორი პასუხები — ${pct(o.correctRate)} (${o.correct}/${o.attempts}). შეგიძლიათ გადახვიდეთ შემდეგ მიზანზე ან შესთავაზოთ უფრო რთული დავალებები.`,
     })
   }
 
