@@ -71,3 +71,14 @@
 .animate-pop-in {
   animation: pop-in 180ms ease-out;
 }
+
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+}

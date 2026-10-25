@@ -65,6 +65,8 @@ export interface AnswerOption {
   position: number
   text: string
   is_correct: boolean
+  /** What choosing this wrong option reveals (teacher-only). */
+  misconception: string
 }
 
 export interface GameSession {
@@ -102,6 +104,8 @@ export interface SessionQuestion {
   time_limit_seconds: number
   options: string[]
   correct_index: number
+  /** Per option: misconception note ('' for the correct one). Teacher-only. */
+  option_notes?: string[]
 }
 
 export interface Participant {

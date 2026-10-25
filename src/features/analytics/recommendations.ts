@@ -81,19 +81,21 @@ export function buildRecommendations(a: SessionAnalytics, maxItems = 8): Recomme
     if (q.lowEvidence || q.topWrongIndex === null) continue
     const wrong = q.options[q.topWrongIndex]
     const right = q.options[q.correctIndex]
+    const note = q.optionNotes?.[q.topWrongIndex] ?? ''
+    const why = note ? ` სავარაუდო მიზეზი: ${note.replace(/[.]+$/, '')}.` : ''
     if (q.possiblyAmbiguous) {
       out.push({
         kind: 'review_question',
         severity: 'medium',
         title: `გადახედეთ ფორმულირებას: ${qLabel(q)}`,
-        detail: `არასწორი პასუხი „${optionLabel(q.topWrongIndex)}“ (${quote(wrong, 50)}) აირჩია ${pct(q.topWrongShare)}-მა, სწორი კი — ${pct(q.correctRate)}-მა. ეს შეიძლება მიუთითებდეს ორაზროვან კითხვაზე ან ძალიან გავრცელებულ მცდარ წარმოდგენაზე.`,
+        detail: `არასწორი პასუხი „${optionLabel(q.topWrongIndex)}“ (${quote(wrong, 50)}) აირჩია ${pct(q.topWrongShare)}-მა, სწორი კი — ${pct(q.correctRate)}-მა. ეს შეიძლება მიუთითებდეს ორაზროვან კითხვაზე ან ძალიან გავრცელებულ მცდარ წარმოდგენაზე.${why}`,
       })
     } else if (q.misconception) {
       out.push({
         kind: 'misconception',
         severity: 'medium',
         title: `განმარტეთ განსხვავება: ${quote(right, 40)} და ${quote(wrong, 40)}`,
-        detail: `${qLabel(q)}-ში მოსწავლეთა ${pct(q.topWrongShare)} ირჩევდა ერთსა და იმავე არასწორ პასუხს. ეს ტიპური შეცდომაა, რომელიც ცალკე განხილვას საჭიროებს.`,
+        detail: `${qLabel(q)}-ში მოსწავლეთა ${pct(q.topWrongShare)} ირჩევდა ერთსა და იმავე არასწორ პასუხს. ეს ტიპური შეცდომაა, რომელიც ცალკე განხილვას საჭიროებს.${why}`,
       })
     }
   }
