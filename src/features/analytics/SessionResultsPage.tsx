@@ -75,7 +75,7 @@ export function SessionResultsPage() {
         actions={
           <>
             <ButtonLink variant="primary" icon={<FileText className="size-4" />} to={`/app/analytics/${session.id}/report`}>
-              ანგარიში (PDF / ბეჭდვა)
+              ანგარიში (ბეჭდვა / PDF / Word)
             </ButtonLink>
             <Button variant="secondary" icon={<Download className="size-4" />} onClick={() => downloadText(`${file}_შედეგები.csv`, resultsCsv(analytics, studentReports))} disabled={o.participantCount === 0}>
               შედეგები (CSV)
