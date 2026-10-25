@@ -12,7 +12,7 @@ import { toGeorgianMessage } from '@/lib/errors'
 import { formatDateTime, formatNumber, formatPercent } from '@/lib/format'
 import { useAsync } from '@/lib/useAsync'
 import { loadSessionBundle } from '@/features/game/api'
-import { computeAnalytics } from './compute'
+import { askedQuestionCount, computeAnalytics } from './compute'
 import { buildRecommendations } from './recommendations'
 import { buildObjectiveGroups, buildStudentReports, describeObjectiveGroup } from './students'
 import { StudentReportView } from './StudentAnalysis'
@@ -49,7 +49,7 @@ export function ReportPage() {
     }
   }, [menuOpen])
 
-  const analytics = useMemo(() => (data ? computeAnalytics(data.questions, data.participants, data.answers) : null), [data])
+  const analytics = useMemo(() => (data ? computeAnalytics(data.questions, data.participants, data.answers, askedQuestionCount(data.session)) : null), [data])
   const reports = useMemo(() => (analytics ? buildStudentReports(analytics) : []), [analytics])
   const groups = useMemo(() => buildObjectiveGroups(reports), [reports])
   const recs = useMemo(() => (analytics ? buildRecommendations(analytics) : []), [analytics])
@@ -227,7 +227,7 @@ export function ReportPage() {
                       <tr key={g.name}>
                         <td className="py-2 pr-3 text-slate-800">{g.name}</td>
                         <td className="py-2 pr-3 text-right whitespace-nowrap tabular-nums">
-                          {formatPercent(g.correctRate)} ({g.correct}/{g.responses})
+                          {formatPercent(g.correctRate)} ({g.correct}/{g.attempts})
                         </td>
                         <td className="py-2 whitespace-nowrap">{MASTERY_LABEL[g.mastery]}</td>
                       </tr>
