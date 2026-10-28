@@ -223,38 +223,8 @@ export function QuestionCard({
           )}
         </fieldset>
 
-        <details className="group rounded-xl border border-slate-200 bg-slate-50/60" open={q.optionNotes.some((n, i) => i !== q.correctIndex && n.trim() !== '')}>
-          <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2.5 text-sm font-semibold text-slate-800">
-            <Lightbulb className="size-4 text-amber-600" aria-hidden />
-            რას ნიშნავს არასწორი პასუხის არჩევა?
-            <span className="font-normal text-slate-500">— ანალიტიკისთვის, არასავალდებულო</span>
-          </summary>
-          <div className="space-y-2 px-3 pb-3">
-            <p className="text-xs text-slate-500">
-              ჩაწერეთ, რა ტიპურ შეცდომას ავლენს თითოეული არასწორი პასუხი. შედეგებში ეს დაგეხმარებათ გაიგოთ, რატომ შეცდა
-              მოსწავლე. მოსწავლეები ამ ტექსტს ვერ ხედავენ.
-            </p>
-            {q.options.map((opt, i) =>
-              i === q.correctIndex ? null : (
-                <div key={i} className="flex items-start gap-2">
-                  <AnswerBadge index={i} className="mt-1.5 size-7 shrink-0" />
-                  <AutoTextarea
-                    value={q.optionNotes[i]}
-                    maxLength={300}
-                    onChange={(v) => {
-                      const optionNotes = [...q.optionNotes] as DraftQuestion['optionNotes']
-                      optionNotes[i] = v
-                      update({ optionNotes })
-                    }}
-                    aria-label={`შეცდომის ახსნა პასუხისთვის ${optionLabel(i)}${opt ? `: ${opt}` : ''}`}
-                    placeholder={opt ? `მაგ.: „${opt}“-ის არჩევა ნიშნავს, რომ მოსწავლე…` : 'შეცდომის ახსნა'}
-                    className="min-h-10 flex-1"
-                  />
-                </div>
-              ),
-            )}
-          </div>
-        </details>
+        {/* Misconception notes come from the AI and are saved for the analytics
+            ("why the student got it wrong"); they are not edited here. */}
 
         <div className="space-y-1.5">
           <label htmlFor={`${baseId}-expl`} className="block text-sm font-semibold text-slate-800">

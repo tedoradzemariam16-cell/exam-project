@@ -38,6 +38,8 @@ export interface DraftQuestion {
 }
 
 export const MAX_MATERIAL_STORED = 60000
+/** Practically no limit; only guards against pasting a whole document by mistake. */
+export const MAX_OBJECTIVE_CHARS = 5000
 export const TIME_OPTIONS = [10, 15, 20, 30, 45, 60, 90, 120]
 /** Speed-bonus choices shown to the teacher; 0 = no extra points for speed. */
 export const SPEED_BONUS_OPTIONS = [0, 100, 250, 500, 1000]
@@ -102,10 +104,10 @@ export const draftSettingsSchema = z.object({
   subject: trimmed(100, 'მაქსიმუმ 100 სიმბოლო'),
   gradeLevel: trimmed(50, 'მაქსიმუმ 50 სიმბოლო'),
   topic: trimmed(200, 'მაქსიმუმ 200 სიმბოლო'),
-  learningObjective: trimmed(500, 'მაქსიმუმ 500 სიმბოლო'),
+  learningObjective: trimmed(MAX_OBJECTIVE_CHARS, `მაქსიმუმ ${MAX_OBJECTIVE_CHARS} სიმბოლო`),
   extraObjectives: z
     .string()
-    .refine((v) => v.split('\n').every((l) => l.trim().length <= 500), 'თითოეული მიზანი — მაქსიმუმ 500 სიმბოლო')
+    .refine((v) => v.split('\n').every((l) => l.trim().length <= MAX_OBJECTIVE_CHARS), `თითოეული მიზანი — მაქსიმუმ ${MAX_OBJECTIVE_CHARS} სიმბოლო`)
     .refine((v) => v.split('\n').filter((l) => l.trim()).length <= 9, 'მაქსიმუმ 9 დამატებითი მიზანი'),
   researchQuestion: trimmed(1000, 'მაქსიმუმ 1000 სიმბოლო'),
   material: z.string().max(MAX_MATERIAL_STORED, `მასალა არ უნდა აღემატებოდეს ${MAX_MATERIAL_STORED} სიმბოლოს`),
@@ -122,7 +124,7 @@ export const generationSettingsSchema = draftSettingsSchema.extend({
   subject: trimmed(100, 'მაქსიმუმ 100 სიმბოლო').min(1, 'მიუთითეთ საგანი'),
   gradeLevel: trimmed(50, 'მაქსიმუმ 50 სიმბოლო').min(1, 'მიუთითეთ კლასი'),
   topic: trimmed(200, 'მაქსიმუმ 200 სიმბოლო').min(1, 'მიუთითეთ თემა'),
-  learningObjective: trimmed(500, 'მაქსიმუმ 500 სიმბოლო').min(1, 'მიუთითეთ შუალედური სასწავლო მიზანი'),
+  learningObjective: trimmed(MAX_OBJECTIVE_CHARS, `მაქსიმუმ ${MAX_OBJECTIVE_CHARS} სიმბოლო`).min(1, 'მიუთითეთ შუალედური სასწავლო მიზანი'),
 })
 
 export type FieldErrors<T> = Partial<Record<keyof T, string>>
