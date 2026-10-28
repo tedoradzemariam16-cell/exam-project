@@ -334,8 +334,8 @@ export function HostPage() {
               <div className="flex items-start gap-5">
                 <Countdown remaining={left} total={total} size="lg" paused={currentPhase === 'paused'} />
                 <div className="min-w-0 flex-1">
-                  {question.topic && <p className="text-sm font-semibold text-brand-700">{question.topic}</p>}
-                  <h1 className="mt-1 text-2xl leading-snug font-bold text-slate-950 sm:text-3xl">{question.text}</h1>
+                  {/* The sub-topic is for analytics only: on the projector it can hint at the answer. */}
+                  <h1 className="text-2xl leading-snug font-bold text-slate-950 sm:text-3xl">{question.text}</h1>
                 </div>
               </div>
               {currentPhase === 'paused' && (
