@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  answerGiveAways,
   emptyQuestion,
   fromGenerated,
   fromLoaded,
@@ -7,6 +8,7 @@ import {
   objectivesOf,
   validateQuestion,
   DEFAULT_SETTINGS,
+  type DraftQuestion,
 } from '@/features/quiz/model'
 import { removeFileBlock, validateFile, extractText, ExtractError, normalizeText } from '@/features/quiz/extractText'
 import { toGeorgianMessage } from '@/lib/errors'
@@ -192,5 +194,21 @@ describe('answer shuffling', () => {
     const { randomCorrectPositions } = await import('@/features/quiz/model')
     expect(randomCorrectPositions(0)).toEqual([])
     expect(randomCorrectPositions(1, seq(5))).toHaveLength(1)
+  })
+})
+
+describe('answer give-away hints', () => {
+  const base = { text: 'რომელი აირი გამოიყოფა ფოტოსინთეზის დროს?', correctIndex: 0 }
+  it('flags a correct answer that is much longer than the others', () => {
+    const q = { ...base, options: ['ჟანგბადი, რომელიც მცენარის ფოთლებიდან ჰაერში გამოდის', 'აზოტი', 'მეთანი', 'ჰელიუმი'] as DraftQuestion['options'] }
+    expect(answerGiveAways(q)).toContain('longest')
+  })
+  it('flags a correct answer that alone repeats a word from the question', () => {
+    const q = { ...base, options: ['ფოტოსინთეზური ჟანგბადი', 'აზოტი', 'მეთანი', 'ჰელიუმი'] as DraftQuestion['options'] }
+    expect(answerGiveAways(q)).toContain('echo')
+  })
+  it('is quiet for a balanced answer set', () => {
+    const q = { ...base, options: ['ჟანგბადი', 'ნახშირორჟანგი', 'აზოტი', 'წყალბადი'] as DraftQuestion['options'] }
+    expect(answerGiveAways(q)).toEqual([])
   })
 })

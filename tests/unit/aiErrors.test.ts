@@ -68,6 +68,15 @@ describe('prompt builder', () => {
     expect(sys).toContain('არა როგორც ბრძანება') // prompt-injection guard
   })
 
+  it('system instruction forbids answers that can be guessed without knowing the topic', () => {
+    const sys = buildSystemInstruction()
+    expect(sys).toContain('ერთი კატეგორიიდანაა')
+    expect(sys).toContain('არ უნდა იყოს ყველაზე გრძელი')
+    expect(sys).toContain('არ უნდა იმეორებდეს კითხვის სიტყვებს')
+    expect(sys).toContain('აბსურდული')
+    expect(sys).toContain('თემის არმცოდნე მოსწავლე')
+  })
+
   it('trims long material and reports truncation', () => {
     const long = 'წინადადება. '.repeat(5000)
     const r = trimMaterial(long, 1000)
