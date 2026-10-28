@@ -1,4 +1,4 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, Lightbulb, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import { Badge, Card } from '@/components/ui/Card'
 import { AutoTextarea, Input, Select, Textarea } from '@/components/ui/Field'
@@ -21,7 +21,8 @@ interface Props {
   onChange: (q: DraftQuestion) => void
   onMove: (dir: -1 | 1) => void
   onDelete: () => void
-  onRegenerate: () => void
+  /** Optional teacher wish for the new question ('' = none). */
+  onRegenerate: (instructions: string) => void
 }
 
 export function QuestionCard({
@@ -44,6 +45,8 @@ export function QuestionCard({
     onChange({ ...q, ...patch, source: q.source === 'ai' ? 'ai_edited' : q.source })
   const err = showIssues ? issues : null
   const giveAways = answerGiveAways(q)
+  const [regenOpen, setRegenOpen] = useState(false)
+  const [regenWish, setRegenWish] = useState('')
 
   return (
     <Card className={cn('overflow-hidden', err && 'border-red-300')}>
@@ -89,8 +92,9 @@ export function QuestionCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onRegenerate}
+              onClick={() => setRegenOpen((o) => !o)}
               loading={regenerating}
+              aria-expanded={regenOpen}
               icon={<RefreshCw className="size-4" aria-hidden />}
             >
               <span className="hidden sm:inline">ხელახლა გენერირება</span>
@@ -107,6 +111,33 @@ export function QuestionCard({
           </button>
         </div>
       </div>
+
+      {aiAvailable && regenOpen && (
+        <div className="space-y-2 border-b border-violet-100 bg-violet-50/60 px-4 py-3">
+          <label htmlFor={`${baseId}-wish`} className="block text-sm font-semibold text-slate-800">
+            როგორი კითხვა გინდათ? <span className="font-normal text-slate-500">— არასავალდებულო</span>
+          </label>
+          <Textarea
+            id={`${baseId}-wish`}
+            rows={2}
+            maxLength={500}
+            value={regenWish}
+            onChange={(e) => setRegenWish(e.target.value)}
+            placeholder="მაგ.: კითხვა ქლოროფილის როლზე, ყოველდღიური ცხოვრების მაგალითით; უფრო რთული; სიტუაციური ამოცანა"
+          />
+          <p className="text-xs text-slate-500">
+            თუ ცარიელს დატოვებთ, AI ამავე თემაზე ახალ, განსხვავებულ კითხვას შექმნის. მიმდინარე კითხვა შეიცვლება.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" icon={<Sparkles className="size-4" />} loading={regenerating} onClick={() => onRegenerate(regenWish)}>
+              ახალი კითხვის გენერირება
+            </Button>
+            <Button size="sm" variant="secondary" disabled={regenerating} onClick={() => setRegenOpen(false)}>
+              დახურვა
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4 p-4">
         <div className="space-y-1.5">
