@@ -1,12 +1,12 @@
-import { useId } from 'react'
+import { useId, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, Lightbulb, RefreshCw, Sparkles, Trash2 } from 'lucide-react'
 import { Badge, Card } from '@/components/ui/Card'
-import { Input, Select, Textarea } from '@/components/ui/Field'
+import { AutoTextarea, Input, Select, Textarea } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/cn'
 import { AnswerBadge } from '@/features/game/AnswerShape'
 import { optionLabel } from '@/features/game/answerStyles'
-import { TIME_OPTIONS, type DraftQuestion, type QuestionIssues } from './model'
+import { TIME_OPTIONS, answerGiveAways, type DraftQuestion, type QuestionIssues } from './model'
 
 interface Props {
   index: number
@@ -21,7 +21,8 @@ interface Props {
   onChange: (q: DraftQuestion) => void
   onMove: (dir: -1 | 1) => void
   onDelete: () => void
-  onRegenerate: () => void
+  /** Optional teacher wish for the new question ('' = none). */
+  onRegenerate: (instructions: string) => void
 }
 
 export function QuestionCard({
@@ -43,6 +44,9 @@ export function QuestionCard({
   const update = (patch: Partial<DraftQuestion>) =>
     onChange({ ...q, ...patch, source: q.source === 'ai' ? 'ai_edited' : q.source })
   const err = showIssues ? issues : null
+  const giveAways = answerGiveAways(q)
+  const [regenOpen, setRegenOpen] = useState(false)
+  const [regenWish, setRegenWish] = useState('')
 
   return (
     <Card className={cn('overflow-hidden', err && 'border-red-300')}>
@@ -88,8 +92,9 @@ export function QuestionCard({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onRegenerate}
+              onClick={() => setRegenOpen((o) => !o)}
               loading={regenerating}
+              aria-expanded={regenOpen}
               icon={<RefreshCw className="size-4" aria-hidden />}
             >
               <span className="hidden sm:inline">ხელახლა გენერირება</span>
@@ -106,6 +111,33 @@ export function QuestionCard({
           </button>
         </div>
       </div>
+
+      {aiAvailable && regenOpen && (
+        <div className="space-y-2 border-b border-violet-100 bg-violet-50/60 px-4 py-3">
+          <label htmlFor={`${baseId}-wish`} className="block text-sm font-semibold text-slate-800">
+            როგორი კითხვა გინდათ? <span className="font-normal text-slate-500">— არასავალდებულო</span>
+          </label>
+          <Textarea
+            id={`${baseId}-wish`}
+            rows={2}
+            maxLength={500}
+            value={regenWish}
+            onChange={(e) => setRegenWish(e.target.value)}
+            placeholder="მაგ.: კითხვა ქლოროფილის როლზე, ყოველდღიური ცხოვრების მაგალითით; უფრო რთული; სიტუაციური ამოცანა"
+          />
+          <p className="text-xs text-slate-500">
+            თუ ცარიელს დატოვებთ, AI ამავე თემაზე ახალ, განსხვავებულ კითხვას შექმნის. მიმდინარე კითხვა შეიცვლება.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" icon={<Sparkles className="size-4" />} loading={regenerating} onClick={() => onRegenerate(regenWish)}>
+              ახალი კითხვის გენერირება
+            </Button>
+            <Button size="sm" variant="secondary" disabled={regenerating} onClick={() => setRegenOpen(false)}>
+              დახურვა
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-4 p-4">
         <div className="space-y-1.5">
@@ -127,33 +159,33 @@ export function QuestionCard({
           <legend className="mb-2 text-sm font-semibold text-slate-800">
             პასუხები <span className="font-normal text-slate-500">— მონიშნეთ ერთი სწორი</span>
           </legend>
-          <div className="grid gap-2 md:grid-cols-2">
+          <div className="grid gap-2">
             {q.options.map((opt, i) => {
               const correct = q.correctIndex === i
               return (
                 <div
                   key={i}
                   className={cn(
-                    'flex items-center gap-2 rounded-xl border p-2 transition-colors',
+                    'flex items-start gap-2 rounded-xl border p-2 transition-colors',
                     correct ? 'border-green-500 bg-green-50' : 'border-slate-200',
                     err?.optionIndexes?.includes(i) && 'border-red-400',
                   )}
                 >
-                  <AnswerBadge index={i} className="size-8" />
-                  <Input
+                  <AnswerBadge index={i} className="mt-1 size-8 shrink-0" />
+                  <AutoTextarea
                     value={opt}
-                    onChange={(e) => {
+                    onChange={(v) => {
                       const options = [...q.options] as DraftQuestion['options']
-                      options[i] = e.target.value
+                      options[i] = v
                       update({ options })
                     }}
                     aria-label={`პასუხი ${optionLabel(i)}`}
                     placeholder={`პასუხი ${optionLabel(i)}`}
-                    className="h-10 border-transparent shadow-none"
+                    className="min-h-10 flex-1 border-transparent shadow-none"
                   />
                   <label
                     className={cn(
-                      'flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold',
+                      'mt-1 flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-semibold',
                       correct ? 'bg-green-600 text-white' : 'text-slate-600 hover:bg-slate-100',
                     )}
                   >
@@ -173,6 +205,22 @@ export function QuestionCard({
           {(err?.options || err?.correctIndex) && (
             <p className="mt-2 text-sm font-medium text-red-700">{err.options ?? err.correctIndex}</p>
           )}
+          {giveAways.length > 0 && (
+            <p className="mt-2 flex gap-2 rounded-lg bg-amber-50 p-2 text-sm text-amber-950">
+              <Lightbulb className="mt-0.5 size-4 shrink-0 text-amber-700" aria-hidden />
+              <span>
+                სწორი პასუხი შეიძლება გამოსაცნობი იყოს:{' '}
+                {giveAways
+                  .map((g) =>
+                    g === 'longest'
+                      ? 'ის სხვა პასუხებზე შესამჩნევად გრძელია'
+                      : 'მხოლოდ ის იმეორებს კითხვაში არსებულ სიტყვას',
+                  )
+                  .join('; ')}
+                . გაათანაბრეთ პასუხები ან სცადეთ „ხელახლა გენერირება“.
+              </span>
+            </p>
+          )}
         </fieldset>
 
         <details className="group rounded-xl border border-slate-200 bg-slate-50/60" open={q.optionNotes.some((n, i) => i !== q.correctIndex && n.trim() !== '')}>
@@ -188,19 +236,19 @@ export function QuestionCard({
             </p>
             {q.options.map((opt, i) =>
               i === q.correctIndex ? null : (
-                <div key={i} className="flex items-center gap-2">
-                  <AnswerBadge index={i} className="size-7" />
-                  <Input
+                <div key={i} className="flex items-start gap-2">
+                  <AnswerBadge index={i} className="mt-1.5 size-7 shrink-0" />
+                  <AutoTextarea
                     value={q.optionNotes[i]}
                     maxLength={300}
-                    onChange={(e) => {
+                    onChange={(v) => {
                       const optionNotes = [...q.optionNotes] as DraftQuestion['optionNotes']
-                      optionNotes[i] = e.target.value
+                      optionNotes[i] = v
                       update({ optionNotes })
                     }}
                     aria-label={`შეცდომის ახსნა პასუხისთვის ${optionLabel(i)}${opt ? `: ${opt}` : ''}`}
                     placeholder={opt ? `მაგ.: „${opt}“-ის არჩევა ნიშნავს, რომ მოსწავლე…` : 'შეცდომის ახსნა'}
-                    className="h-10"
+                    className="min-h-10 flex-1"
                   />
                 </div>
               ),

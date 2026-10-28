@@ -3,6 +3,8 @@ import {
   forwardRef,
   isValidElement,
   useId,
+  useLayoutEffect,
+  useRef,
   type InputHTMLAttributes,
   type ReactElement,
   type ReactNode,
@@ -90,6 +92,43 @@ export const Textarea = forwardRef<
     />
   )
 })
+
+/**
+ * Single-paragraph text that wraps and grows with its content instead of
+ * scrolling sideways (e.g. answer options). Enter does not add a new line.
+ */
+export function AutoTextarea({
+  className,
+  invalid,
+  value,
+  onChange,
+  ...rest
+}: Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' | 'onChange' | 'rows'> & {
+  invalid?: boolean
+  value: string
+  onChange: (value: string) => void
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.height = 'auto'
+    el.style.height = `${el.scrollHeight}px`
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      onChange={(e) => onChange(e.target.value.replace(/\s*\n+\s*/g, ' '))}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.preventDefault()
+      }}
+      className={cn(control, 'resize-none overflow-hidden py-2 leading-snug', stateClass(invalid), className)}
+      {...rest}
+    />
+  )
+}
 
 export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSelectElement> & { invalid?: boolean }>(
   function Select({ className, invalid, children, ...rest }, ref) {

@@ -52,6 +52,8 @@ export const generationRequestSchema = z.object({
   difficulty: z.enum(DIFFICULTIES),
   /** Existing question texts — used to avoid duplicates (esp. for "single"). */
   existingQuestions: z.array(z.string().max(500)).max(MAX_QUESTIONS).default([]),
+  /** Optional teacher wish for a regenerated question ("about X, with an everyday example"). */
+  instructions: z.string().trim().max(500).default(''),
   language: z.literal('ka').default('ka'),
 })
 

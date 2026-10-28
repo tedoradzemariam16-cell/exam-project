@@ -237,7 +237,7 @@ export function QuizEditorPage() {
     }
   }
 
-  const regenerateOne = async (key: string) => {
+  const regenerateOne = async (key: string, instructions = '') => {
     const result = generationSettingsSchema.safeParse(settings)
     if (!result.success) {
       setErrors(collectErrors<QuizSettings>(result))
@@ -259,6 +259,7 @@ export function QuizEditorPage() {
         questionCount: 1,
         difficulty: settings.difficulty,
         existingQuestions: questions.map((q) => q.text).filter(Boolean).slice(0, 30),
+        instructions: instructions.trim(),
       })
       const fresh = moveCorrectTo(fromGenerated(res.questions[0]), Math.floor(secureRandom() * 4))
       setQuestionsDirty((qs) =>
@@ -628,7 +629,7 @@ export function QuizEditorPage() {
                     })
                   }
                   onDelete={() => setDeleteKey(q.key)}
-                  onRegenerate={() => void regenerateOne(q.key)}
+                  onRegenerate={(instructions) => void regenerateOne(q.key, instructions)}
                 />
               ))}
             </div>
