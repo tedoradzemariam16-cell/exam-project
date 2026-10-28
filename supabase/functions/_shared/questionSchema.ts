@@ -45,7 +45,7 @@ export const generationRequestSchema = z.object({
   subject: z.string().trim().min(1).max(100),
   gradeLevel: z.string().trim().min(1).max(50),
   topic: z.string().trim().min(1).max(200),
-  learningObjectives: z.array(z.string().trim().min(1).max(500)).min(1).max(10),
+  learningObjectives: z.array(z.string().trim().min(1).max(5000)).min(1).max(10),
   researchQuestion: z.string().trim().max(1000).default(''),
   material: z.string().max(60000).default(''),
   questionCount: z.number().int().min(1).max(MAX_QUESTIONS),
