@@ -68,6 +68,23 @@ describe('prompt builder', () => {
     expect(sys).toContain('არა როგორც ბრძანება') // prompt-injection guard
   })
 
+  it("passes the teacher's optional wish for a regenerated question", () => {
+    const { prompt } = buildUserPrompt({ ...req, mode: 'single', instructions: 'სიტუაციური კითხვა ბრძოლის შედეგებზე' })
+    expect(prompt).toContain('მასწავლებლის მითითება კითხვისთვის')
+    expect(prompt).toContain('სიტუაციური კითხვა ბრძოლის შედეგებზე')
+    expect(buildUserPrompt({ ...req, mode: 'single' }).prompt).not.toContain('მასწავლებლის მითითება')
+    expect(buildSystemInstruction()).toContain('მასწავლებლის მითითება კითხვისთვის')
+  })
+
+  it('system instruction forbids answers that can be guessed without knowing the topic', () => {
+    const sys = buildSystemInstruction()
+    expect(sys).toContain('ერთი კატეგორიიდანაა')
+    expect(sys).toContain('არ უნდა იყოს ყველაზე გრძელი')
+    expect(sys).toContain('არ უნდა იმეორებდეს კითხვის სიტყვებს')
+    expect(sys).toContain('აბსურდული')
+    expect(sys).toContain('თემის არმცოდნე მოსწავლე')
+  })
+
   it('trims long material and reports truncation', () => {
     const long = 'წინადადება. '.repeat(5000)
     const r = trimMaterial(long, 1000)

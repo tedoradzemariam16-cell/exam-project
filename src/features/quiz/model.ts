@@ -179,6 +179,29 @@ export function validateQuestion(q: DraftQuestion): QuestionIssues | null {
   return issues
 }
 
+// ---------------------------------------------------------------- give-aways
+// Cheap checks for answer sets where the correct option can be guessed
+// without knowing the topic. Shown as hints; they never block saving.
+
+export type GiveAway = 'longest' | 'echo'
+
+const words = (s: string) => s.toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
+/** Georgian words change endings, so compare the first 5 letters of longer words. */
+const stems = (s: string) => new Set(words(s).filter((w) => w.length >= 5).map((w) => w.slice(0, 5)))
+
+export function answerGiveAways(q: Pick<DraftQuestion, 'text' | 'options' | 'correctIndex'>): GiveAway[] {
+  const correct = q.options[q.correctIndex]?.trim() ?? ''
+  const wrong = q.options.filter((_, i) => i !== q.correctIndex).map((o) => o.trim())
+  if (!correct || wrong.some((o) => !o)) return []
+  const out: GiveAway[] = []
+  const longestWrong = Math.max(...wrong.map((o) => o.length))
+  if (correct.length >= longestWrong * 1.4 && correct.length - longestWrong >= 10) out.push('longest')
+  const questionStems = stems(q.text)
+  const shares = (o: string) => [...stems(o)].some((w) => questionStems.has(w))
+  if (shares(correct) && !wrong.some(shares)) out.push('echo')
+  return out
+}
+
 // ---------------------------------------------------------------- shuffling
 // Language models tend to put the correct answer first. We shuffle answer
 // options and give every question an independent random correct position.
