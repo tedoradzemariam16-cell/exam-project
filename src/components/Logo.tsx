@@ -17,7 +17,7 @@ export function LogoMark({ className }: { className?: string }) {
 /** The school's "თაობა" wordmark, in its original colours. */
 export function SchoolWordmark({ className }: { className?: string }) {
   return (
-    <svg viewBox="15 15 562 166" className={cn('h-8 w-auto', className)} aria-hidden="true">
+    <svg viewBox="15 15 562 166" className={cn('w-auto', className ?? 'h-8')} aria-hidden="true">
       <path fill={SCHOOL_NAVY} fillRule="evenodd" d={WORDMARK_LETTERS} />
       <path fill={SCHOOL_ORANGE} fillRule="evenodd" d={WORDMARK_EMBLEM} />
     </svg>
@@ -32,11 +32,11 @@ export function Logo({ to = '/', light, className }: { to?: string; light?: bool
   return (
     <Link
       to={to}
-      className={cn('inline-flex items-center gap-2 rounded-xl', light && 'bg-white px-3 py-1.5 shadow-sm', className)}
+      className={cn('inline-flex items-center gap-1.5 rounded-xl sm:gap-2', light && 'bg-white px-3 py-1.5 shadow-sm', className)}
       aria-label="თაობა ქვიზი — მთავარი"
     >
-      <SchoolWordmark className="h-8" />
-      <span className="rounded-full px-2.5 py-0.5 text-sm font-extrabold" style={{ backgroundColor: SCHOOL_ORANGE, color: SCHOOL_NAVY }}>
+      <SchoolWordmark className="h-6 sm:h-8" />
+      <span className="rounded-full px-2 py-0.5 text-xs font-extrabold sm:px-2.5 sm:text-sm" style={{ backgroundColor: SCHOOL_ORANGE, color: SCHOOL_NAVY }}>
         ქვიზი
       </span>
     </Link>
