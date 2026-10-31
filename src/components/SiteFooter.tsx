@@ -1,8 +1,13 @@
 import { Link } from 'react-router-dom'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, Mail, MapPin } from 'lucide-react'
 import { SchoolWordmark } from './Logo'
 
 const SCHOOL_SITE = 'https://taoba.edu.ge/ka'
+const ADDRESS = 'ბათუმი, რურუას ქუჩა 10'
+const MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent('Batumi, Rurua street 10')}`
+const EMAIL = 'schooltaoba@gmail.com'
+const MISSION =
+  'ჩვენ გვჯერა, რომ მხოლოდ საკუთარი პიროვნების თავისუფლად განვითარება განაპირობებს მოსწავლის ბედნიერებას და წარმატებას, შესაბამისად მზად ვართ ვაქციოთ სწავლა მოსწავლისთვის საინტერესო პროცესად, გარემოში სადაც ყველა მიღებული და დაფასებულია, სადაც მოსწავლე შეძლებს იპოვოს საკუთარი თავი.'
 
 // Brand glyphs are drawn inline (lucide no longer ships brand icons).
 function InstagramIcon() {
@@ -40,11 +45,18 @@ const SOCIAL = [
 export function SiteFooter() {
   return (
     <footer className="border-t border-slate-200 bg-slate-50">
+      <div className="mx-auto max-w-6xl px-4 pt-12 sm:px-6">
+        <figure className="rounded-2xl border-l-4 border-accent-500 bg-white p-5 shadow-sm sm:p-6">
+          <blockquote className="text-[0.95rem] leading-relaxed text-slate-700 italic">„{MISSION}“</blockquote>
+          <figcaption className="mt-3 text-sm font-bold text-brand-900">— სკოლა თაობა</figcaption>
+        </figure>
+      </div>
       <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr]">
         <div>
           <a href={SCHOOL_SITE} target="_blank" rel="noopener noreferrer" aria-label="სკოლა თაობა — ოფიციალური საიტი">
             <SchoolWordmark className="h-10" />
           </a>
+          <p className="mt-2 text-sm font-extrabold tracking-wide text-accent-600">მეტი ვიდრე სკოლა</p>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-600">
             „თაობა ქვიზი“ — სკოლა თაობის საგანმანათლებლო პლატფორმა: ინტერაქტიული ქვიზები გაკვეთილზე, ხელოვნური ინტელექტით
             შექმნილი კითხვები და შედეგების ანალიზი მასწავლებლისთვის.
@@ -78,7 +90,20 @@ export function SiteFooter() {
         </nav>
 
         <div>
-          <h2 className="text-sm font-bold text-slate-900">გამოგვყევით</h2>
+          <h2 className="text-sm font-bold text-slate-900">კონტაქტი</h2>
+          <ul className="mt-3 space-y-2 text-sm text-slate-600">
+            <li>
+              <a href={MAP_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-start gap-2 hover:text-brand-700 hover:underline">
+                <MapPin className="mt-0.5 size-4 shrink-0" aria-hidden /> {ADDRESS}
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${EMAIL}`} className="inline-flex items-start gap-2 break-all hover:text-brand-700 hover:underline">
+                <Mail className="mt-0.5 size-4 shrink-0" aria-hidden /> {EMAIL}
+              </a>
+            </li>
+          </ul>
+          <h2 className="mt-6 text-sm font-bold text-slate-900">გამოგვყევით</h2>
           <ul className="mt-3 flex gap-2">
             {SOCIAL.map(({ label, href, Icon }) => (
               <li key={label}>
@@ -98,7 +123,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-slate-200">
-        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-slate-500 sm:px-6">© {new Date().getFullYear()} სკოლა თაობა</p>
+        <p className="mx-auto max-w-6xl px-4 py-4 text-xs text-slate-500 sm:px-6">© {new Date().getFullYear()} სკოლა თაობა · მეტი ვიდრე სკოლა</p>
       </div>
     </footer>
   )
