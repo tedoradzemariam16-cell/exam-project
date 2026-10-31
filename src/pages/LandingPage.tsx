@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BarChart3, BrainCircuit, FileText, Gamepad2, ShieldCheck, Timer } from 'lucide-react'
 import { Logo } from '@/components/Logo'
+import { SiteFooter } from '@/components/SiteFooter'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { ANSWER_STYLES } from '@/features/game/answerStyles'
@@ -24,8 +25,8 @@ const FEATURES = [
   },
   {
     icon: Timer,
-    title: 'სამართლიანი ტაიმერი',
-    text: 'დროს სერვერი აკონტროლებს: დაგვიანებული ან განმეორებითი პასუხი არ მიიღება.',
+    title: 'თანაბარი დრო ყველასთვის',
+    text: 'ყველა მოსწავლეს პასუხისთვის ერთნაირი დრო აქვს. დროის ამოწურვის შემდეგ პასუხი აღარ მიიღება, თითო კითხვაზე კი მხოლოდ ერთხელ შეიძლება პასუხის გაცემა.',
   },
   {
     icon: BarChart3,
@@ -57,21 +58,16 @@ export function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+      <header className="mx-auto flex max-w-6xl items-center justify-between gap-2 px-3 py-4 sm:gap-4 sm:px-6">
         <Logo />
-        <nav className="flex items-center gap-2" aria-label="მთავარი ნავიგაცია">
-          {session && profile ? (
-            <ButtonLink to="/app">ჩემი დაფა</ButtonLink>
-          ) : (
-            <>
-              <ButtonLink to="/login" variant="ghost">
-                შესვლა
-              </ButtonLink>
-              <ButtonLink to="/register" className="hidden sm:inline-flex">
-                რეგისტრაცია
-              </ButtonLink>
-            </>
-          )}
+        <nav className="flex shrink-0 items-center gap-1 sm:gap-2" aria-label="მთავარი ნავიგაცია">
+          {/* Always both links; a signed-in teacher is sent on to the dashboard from /login. */}
+          <ButtonLink to="/login" variant="ghost" size="sm" className="sm:h-11 sm:px-4 sm:text-[0.95rem]">
+            შესვლა
+          </ButtonLink>
+          <ButtonLink to="/register" size="sm" className="sm:h-11 sm:px-4 sm:text-[0.95rem]">
+            რეგისტრაცია
+          </ButtonLink>
         </nav>
       </header>
 
@@ -157,11 +153,7 @@ export function LandingPage() {
         </section>
       </main>
 
-      <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-500">
-        <p>
-          © {new Date().getFullYear()} სკოლა თაობა · <a className="underline hover:text-slate-800" href="/school.html">სკოლის შესახებ</a>
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   )
 }
