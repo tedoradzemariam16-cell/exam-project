@@ -13,9 +13,9 @@ import { useAuth } from './AuthProvider'
  * a waiting screen until an administrator approves the account.
  */
 export function RequireTeacher({ children }: { children: ReactNode }) {
-  const { loading, session, profile, signOut } = useAuth()
+  const { loading, session, profile, profileLoading, signOut } = useAuth()
   const location = useLocation()
-  if (loading) return <PageLoader />
+  if (loading || profileLoading) return <PageLoader />
   if (!session) return <Navigate to="/login" replace state={{ from: location.pathname }} />
   if (!profile) {
     return (
