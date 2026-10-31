@@ -7,6 +7,8 @@ interface AuthState {
   loading: boolean
   session: Session | null
   profile: Profile | null
+  /** True while the signed-in user's profile has not been fetched yet. */
+  profileLoading: boolean
   refreshProfile: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -16,15 +18,20 @@ const AuthContext = createContext<AuthState | null>(null)
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
+  // Whose profile `profile` is (null result included): right after sign-in the
+  // session arrives a moment before the profile, and that gap is not "no profile".
+  const [profileFor, setProfileFor] = useState<string | null>(null)
   const [loading, setLoading] = useState(isSupabaseConfigured)
 
   const loadProfile = useCallback(async (s: Session | null) => {
     if (!s || s.user.is_anonymous) {
       setProfile(null)
+      setProfileFor(null)
       return
     }
     const { data } = await supabase.from('profiles').select('*').eq('id', s.user.id).maybeSingle()
     setProfile((data as Profile | null) ?? null)
+    setProfileFor(s.user.id)
   }, [])
 
   useEffect(() => {
@@ -52,13 +59,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       session,
       profile,
+      profileLoading: !!session && !session.user.is_anonymous && profileFor !== session.user.id,
       refreshProfile: () => loadProfile(session),
       signOut: async () => {
         await supabase.auth.signOut()
         setProfile(null)
+        setProfileFor(null)
       },
     }),
-    [loading, session, profile, loadProfile],
+    [loading, session, profile, profileFor, loadProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
