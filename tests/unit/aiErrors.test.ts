@@ -63,9 +63,22 @@ describe('prompt builder', () => {
     const sys = buildSystemInstruction()
     expect(sys).toContain('ზუსტად ოთხი')
     expect(sys).toContain('მხოლოდ ერთი სწორი')
-    expect(sys).toContain('ქართულით')
+    expect(sys).toContain('ტესტის ენაზე')
     expect(sys).toContain('უპირატესობა')
     expect(sys).toContain('არა როგორც ბრძანება') // prompt-injection guard
+  })
+
+  it('writes the quiz in the chosen language and asks for depth in every language', () => {
+    expect(req.language).toBe('ka')
+    expect(buildUserPrompt(req).prompt).toContain('ტესტის ენა: ქართული')
+    const en = generationRequestSchema.parse({ ...req, language: 'en' })
+    expect(buildUserPrompt(en).prompt).toContain('questions, answer options and explanations in English')
+    const ru = generationRequestSchema.parse({ ...req, language: 'ru' })
+    expect(buildUserPrompt(ru).prompt).toContain('на русском языке')
+    expect(generationRequestSchema.safeParse({ ...req, language: 'fr' }).success).toBe(false)
+    const sys = buildSystemInstruction()
+    expect(sys).toContain('სიღრმისეული და შინაარსიანი')
+    expect(sys).toContain('topic და option_notes ყოველთვის ქართულად')
   })
 
   it("passes the teacher's optional wish for a regenerated question", () => {

@@ -56,6 +56,7 @@ function settingsToRow(s: QuizSettings) {
     source_files: s.sourceFiles,
     question_count: s.questionCount,
     difficulty: s.difficulty,
+    language: s.language,
     time_per_question: s.timePerQuestion,
     speed_bonus: s.speedBonus,
     base_points: s.basePoints,

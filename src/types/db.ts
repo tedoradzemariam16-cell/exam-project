@@ -17,6 +17,8 @@ export interface Profile {
 
 export type TeacherStatus = 'pending' | 'approved' | 'rejected'
 
+export type QuizLanguage = 'ka' | 'en' | 'ru'
+
 export interface Quiz {
   id: string
   teacher_id: string
@@ -34,6 +36,8 @@ export interface Quiz {
   speed_bonus: boolean
   base_points: number
   max_speed_bonus: number
+  /** Absent on databases without the language migration — treat as 'ka'. */
+  language?: QuizLanguage
   status: QuizStatus
   created_at: string
   updated_at: string
