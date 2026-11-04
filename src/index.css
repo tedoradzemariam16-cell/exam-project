@@ -1,8 +1,10 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/noto-sans-georgian';
+/* Russian (Cyrillic) letters: same Noto family; loaded only when such text is shown. */
+@import '@fontsource-variable/noto-sans';
 
 @theme {
-  --font-sans: 'Noto Sans Georgian Variable', 'Noto Sans Georgian', 'Sylfaen', system-ui, sans-serif;
+  --font-sans: 'Noto Sans Georgian Variable', 'Noto Sans Georgian', 'Noto Sans Variable', 'Sylfaen', system-ui, sans-serif;
 
   --color-brand-50: #eef2ff;
   --color-brand-100: #dfe6ff;
