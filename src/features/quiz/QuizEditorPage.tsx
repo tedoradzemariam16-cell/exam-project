@@ -34,6 +34,7 @@ import { MaterialInput } from './MaterialInput'
 import { QuestionCard } from './QuestionCard'
 import {
   DEFAULT_SETTINGS,
+  QUIZ_LANGUAGES,
   SPEED_BONUS_OPTIONS,
   TIME_OPTIONS,
   collectErrors,
@@ -213,6 +214,7 @@ export function QuizEditorPage() {
         material: settings.material,
         questionCount: count,
         difficulty: settings.difficulty,
+        language: settings.language,
         existingQuestions: mode === 'append' ? questions.map((q) => q.text).slice(0, 30) : [],
       })
       // Models tend to put the correct answer first — shuffle to a random position per question.
@@ -258,6 +260,7 @@ export function QuizEditorPage() {
         material: settings.material,
         questionCount: 1,
         difficulty: settings.difficulty,
+        language: settings.language,
         existingQuestions: questions.map((q) => q.text).filter(Boolean).slice(0, 30),
         instructions: instructions.trim(),
       })
@@ -456,6 +459,15 @@ export function QuizEditorPage() {
                   <option value="easy">მარტივი</option>
                   <option value="medium">საშუალო</option>
                   <option value="hard">რთული</option>
+                </Select>
+              </Field>
+              <Field label="ტესტის ენა" hint="კითხვები, პასუხები და ახსნები ამ ენაზე შეიქმნება">
+                <Select value={settings.language} onChange={(e) => patch({ language: e.target.value as QuizSettings['language'] })}>
+                  {QUIZ_LANGUAGES.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
                 </Select>
               </Field>
               <Field label="დრო თითო კითხვაზე" error={errors.timePerQuestion}>

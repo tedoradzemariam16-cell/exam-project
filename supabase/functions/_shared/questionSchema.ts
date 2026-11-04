@@ -54,7 +54,8 @@ export const generationRequestSchema = z.object({
   existingQuestions: z.array(z.string().max(500)).max(MAX_QUESTIONS).default([]),
   /** Optional teacher wish for a regenerated question ("about X, with an everyday example"). */
   instructions: z.string().trim().max(500).default(''),
-  language: z.literal('ka').default('ka'),
+  /** Language of questions, answers and explanations. */
+  language: z.enum(['ka', 'en', 'ru']).default('ka'),
 })
 
 export type GenerationRequest = z.input<typeof generationRequestSchema>

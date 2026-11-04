@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import type { GeneratedQuestion } from '../../../supabase/functions/_shared/questionSchema.ts'
 import type { LoadedQuiz } from './api'
-import type { Difficulty, QuestionSource, SourceFileMeta } from '@/types/db'
+import type { Difficulty, QuestionSource, QuizLanguage, SourceFileMeta } from '@/types/db'
 
 export interface QuizSettings {
   title: string
@@ -16,6 +16,8 @@ export interface QuizSettings {
   sourceFiles: SourceFileMeta[]
   questionCount: number
   difficulty: Difficulty
+  /** Language the questions are written in. */
+  language: QuizLanguage
   timePerQuestion: number
   speedBonus: boolean
   basePoints: number
@@ -36,6 +38,12 @@ export interface DraftQuestion {
   timeLimitSeconds: number | null
   source: QuestionSource
 }
+
+export const QUIZ_LANGUAGES: { value: QuizLanguage; label: string }[] = [
+  { value: 'ka', label: 'ქართული' },
+  { value: 'en', label: 'ინგლისური (English)' },
+  { value: 'ru', label: 'რუსული (Русский)' },
+]
 
 export const MAX_MATERIAL_STORED = 60000
 /** Practically no limit; only guards against pasting a whole document by mistake. */
@@ -66,6 +74,7 @@ export const DEFAULT_SETTINGS: QuizSettings = {
   sourceFiles: [],
   questionCount: 10,
   difficulty: 'medium',
+  language: 'ka',
   timePerQuestion: 20,
   speedBonus: true,
   basePoints: 1000,
@@ -113,6 +122,7 @@ export const draftSettingsSchema = z.object({
   material: z.string().max(MAX_MATERIAL_STORED, `მასალა არ უნდა აღემატებოდეს ${MAX_MATERIAL_STORED} სიმბოლოს`),
   questionCount: z.number().int().min(1, 'მინიმუმ 1').max(30, 'მაქსიმუმ 30'),
   difficulty: z.enum(['easy', 'medium', 'hard']),
+  language: z.enum(['ka', 'en', 'ru']),
   timePerQuestion: z.number().int().min(5, 'მინიმუმ 5 წამი').max(240, 'მაქსიმუმ 240 წამი'),
   speedBonus: z.boolean(),
   basePoints: z.number().int().min(0).max(10000),
@@ -295,6 +305,7 @@ export function fromLoaded(loaded: LoadedQuiz): { settings: QuizSettings; questi
     sourceFiles: Array.isArray(quiz.source_files) ? quiz.source_files : [],
     questionCount: quiz.question_count,
     difficulty: quiz.difficulty,
+    language: quiz.language ?? 'ka',
     timePerQuestion: quiz.time_per_question,
     speedBonus: quiz.speed_bonus,
     basePoints: quiz.base_points,
